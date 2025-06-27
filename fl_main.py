@@ -54,7 +54,7 @@ def fed_run():
     Main function for the baselines of federated learning
     """
     args = fed_args()
-    with open(args.config, "r") as yaml_file:
+    with open(args.config, "r", encoding="utf-8") as yaml_file:
         try:
             config = yaml.safe_load(yaml_file)
         except yaml.YAMLError as exc:
@@ -79,16 +79,36 @@ def fed_run():
     trainset_config, testset = divide_data(num_client=config["system"]["num_client"], num_local_class=config["system"]["num_local_class"], dataset_name=config["system"]["dataset"],
                                            i_seed=config["system"]["i_seed"])
     max_acc = 0
+    
+    use_ldp = config["client"].get("use_ldp", False)
+    ldp_noise_scale = config["client"].get("ldp_noise_scale", 0.0)
+
     # Initialize the clients w.r.t. the federated learning algorithms and the specific federated settings
     for client_id in trainset_config['users']:
         if config["client"]["fed_algo"] == 'FedAvg':
-            client_dict[client_id] = FedClient(client_id, dataset_id=config["system"]["dataset"], epoch=config["client"]["num_local_epoch"], model_name=config["system"]["model"])
+            client_dict[client_id] = FedClient(client_id, dataset_id=config["system"]["dataset"], 
+                                               epoch=config["client"]["num_local_epoch"], 
+                                               model_name=config["system"]["model"],
+                                               use_ldp=use_ldp,
+                                               ldp_noise_scale=ldp_noise_scale)
         elif config["client"]["fed_algo"] == 'SCAFFOLD':
-            client_dict[client_id] = ScaffoldClient(client_id, dataset_id=config["system"]["dataset"], epoch=config["client"]["num_local_epoch"], model_name=config["system"]["model"])
+            client_dict[client_id] = ScaffoldClient(client_id, dataset_id=config["system"]["dataset"], 
+                                                    epoch=config["client"]["num_local_epoch"], 
+                                                    model_name=config["system"]["model"],
+                                                    use_ldp=use_ldp,
+                                                    ldp_noise_scale=ldp_noise_scale)
         elif config["client"]["fed_algo"] == 'FedProx':
-            client_dict[client_id] = FedProxClient(client_id, dataset_id=config["system"]["dataset"], epoch=config["client"]["num_local_epoch"], model_name=config["system"]["model"])
+            client_dict[client_id] = FedProxClient(client_id, dataset_id=config["system"]["dataset"], 
+                                                   epoch=config["client"]["num_local_epoch"], 
+                                                   model_name=config["system"]["model"],
+                                                   use_ldp=use_ldp,
+                                                   ldp_noise_scale=ldp_noise_scale)
         elif config["client"]["fed_algo"] == 'FedNova':
-            client_dict[client_id] = FedNovaClient(client_id, dataset_id=config["system"]["dataset"], epoch=config["client"]["num_local_epoch"], model_name=config["system"]["model"])
+            client_dict[client_id] = FedNovaClient(client_id, dataset_id=config["system"]["dataset"], 
+                                                   epoch=config["client"]["num_local_epoch"], 
+                                                   model_name=config["system"]["model"],
+                                                   use_ldp=use_ldp,
+                                                   ldp_noise_scale=ldp_noise_scale)
         client_dict[client_id].load_trainset(trainset_config['user_data'][client_id])
 
     # Initialize the clients w.r.t. the federated learning algorithms and the specific federated settings
@@ -105,7 +125,6 @@ def fed_run():
     global_state_dict = fed_server.state_dict()
 
     # Main process of federated learning in multiple communication rounds
-
     pbar = tqdm(range(config["system"]["num_round"]))
     for global_round in pbar:
         for client_id in trainset_config['users']:
@@ -132,7 +151,7 @@ def fed_run():
         if config["client"]["fed_algo"] == 'FedAvg':
             global_state_dict, avg_loss, _ = fed_server.agg()
         elif config["client"]["fed_algo"] == 'SCAFFOLD':
-            global_state_dict, avg_loss, _, scv_state = fed_server.agg()  # scarffold
+            global_state_dict, avg_loss, _, scv_state = fed_server.agg()
         elif config["client"]["fed_algo"] == 'FedProx':
             global_state_dict, avg_loss, _ = fed_server.agg()
         elif config["client"]["fed_algo"] == 'FedNova':
