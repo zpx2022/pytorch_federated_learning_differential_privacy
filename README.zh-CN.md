@@ -1,13 +1,12 @@
 [English](README.md) | [简体中文](README.zh-CN.md)
-### **关于此 Fork**
+### **关于此分支**
 
-**本项目是 [rruisong/pytorch_federated_learning](https://github.com/rruisong/pytorch_federated_learning) 的一个二次开发版本。** 我在此基础上，主要增加了客户端差分隐私（Client-Side Differential Privacy）的实现，以用于研究联邦学习中的隐私-效用权衡问题。
+**本项目是 [rruisong/pytorch_federated_learning](https://github.com/rruisong/pytorch_federated_learning) 的一个分支。**此分支的主要贡献是实现了**客户端差分隐私 (DP)**，用于研究联邦学习中的隐私-效用权衡。**有关环境设置、训练和评估的详细说明，请参阅原始代码库。**
 
-**主要修改点:**
-* 在客户端训练逻辑中，集成了**拉普拉斯噪声机制**，可在模型上传前对权重进行扰动。
-* 通过配置文件 (`test_config.yaml`) 可灵活开启/关闭差分隐私，并调整噪声强度。
-* 开展了系统的对比实验，以量化不同隐私保护等级对模型性能的影响。
-
+**主要修改：**
+* 在客户端训练逻辑中集成了**拉普拉斯噪声机制**，用于在模型权重上传到服务器之前对其进行扰动。
+* 通过 `test_config.yaml` 文件灵活地启用/禁用差分隐私功能，允许用户轻松启用/禁用该功能并调整噪声强度。
+* 进行了系统的比较实验，以量化不同隐私级别对模型性能的影响。
 ---
 
 ### **核心实验成果展示**
