@@ -14,5 +14,5 @@ client:
   num_local_epoch: 3
   momentum: 0.9
   num_worker: 2
-  use_ldp: True       # 是否使用本地差分隐私
-  ldp_noise_scale: 0.03   # 如果使用LDP，噪声强度是多少(符合拉普拉斯分布的噪声曲线)
+  use_ldp: True      
+  ldp_noise_scale: 0.03  
