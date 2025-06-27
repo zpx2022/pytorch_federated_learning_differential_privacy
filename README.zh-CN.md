@@ -1,7 +1,7 @@
 [English](README.md) | [简体中文](README.zh-CN.md)
 ### **关于此 Fork**
 
-**本项目是 [rruisong/pytorch_federated_learning](https://github.com/rruisong/pytorch_federated_learning) 的一个二次开发版本。** 我在此基础上，主要增加了**客户端差分隐私（Client-Side Differential Privacy）**的实现，以用于研究联邦学习中的隐私-效用权衡问题。
+**本项目是 [rruisong/pytorch_federated_learning](https://github.com/rruisong/pytorch_federated_learning) 的一个二次开发版本。** 我在此基础上，主要增加了客户端差分隐私（Client-Side Differential Privacy）的实现，以用于研究联邦学习中的隐私-效用权衡问题。
 
 **主要修改点:**
 * 在客户端训练逻辑中，集成了**拉普拉斯噪声机制**，可在模型上传前对权重进行扰动。
