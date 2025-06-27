@@ -1,13 +1,12 @@
 [English](README.md) | [简体中文](README.zh-CN.md)
 ### **About this Fork**
 
-**This project is a fork of [rruisong/pytorch_federated_learning](https://github.com/rruisong/pytorch_federated_learning).** The main contribution of this fork is the implementation of **client-side Differential Privacy (DP)** to study the privacy-utility trade-off in Federated Learning.
+**This project is a fork of [rruisong/pytorch_federated_learning](https://github.com/rruisong/pytorch_federated_learning).** The main contribution of this fork is the implementation of **client-side Differential Privacy (DP)** to study the privacy-utility trade-off in Federated Learning. **For detailed instructions on environment setup, training, and evaluation, please refer to the original repository.**
 
 **Key Modifications:**
 * Integrated a **Laplace noise mechanism** into the client-side training logic to perturb model weights before they are uploaded to the server.
 * Made the Differential Privacy feature flexible via the `test_config.yaml` file, allowing users to easily enable/disable it and adjust the noise intensity.
 * Conducted systematic, comparative experiments to quantify the impact of different privacy levels on model performance.
-
 ---
 
 ### **Key Experimental Results**
