@@ -13,7 +13,7 @@
 
 This project evaluates the effectiveness of Differential Privacy in a challenging **pathological Non-IID setting (2 classes per client)**. The plot below shows the performance of the FedAvg algorithm on the MNIST dataset under different levels of Laplace noise intensity (`b`).
 
-![Federated Learning LDP Comparison](figures/FedAvg_LeNet_MNIST_NonIID_LDP_Comparison_Annotated.png)
+![Federated Learning LDP Comparison](figures/FedAvg_LeNet_MNIST_NIID_LDP_Comparison_Annotated.png)
 
 **Experimental Conclusions:**
 
