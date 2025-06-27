@@ -1,9 +1,3 @@
-# PyTorch Implementation of Federated Learning with Differential Privacy
-
-[![Contributions Welcome](https://img.shields.io/badge/Contributions-Welcome-278ea5)](...) ![Stars](https://img.shields.io/github/stars/rruisong/pytorch_federated_learning?color=yellow&label=Stars) ![Forks](https://img.shields.io/github/forks/rruisong/pytorch_federated_learning?color=green&label=Forks)
-
----
-
 ### **关于此 Fork (About this Fork)**
 
 **本项目是 [rruisong/pytorch_federated_learning](https://github.com/rruisong/pytorch_federated_learning) 的一个二次开发版本。** 我在此基础上，主要增加了**客户端差分隐私（Client-Side Differential Privacy）**的实现，以用于研究联邦学习中的隐私-效用权衡问题。
