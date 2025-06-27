@@ -19,7 +19,7 @@
 
 本项目在病态非独立同分布（Non-IID, 每客户端2类）的挑战性环境下，对差分隐私的效用进行了评估。下图展示了在不同拉普拉斯噪声强度 (`b`)下，FedAvg算法在MNIST数据集上的性能表现：
 
-![Federated Learning LDP Comparison](<这里替换为您绘图脚本生成的图片路径，例如：postprocessing/FedAvg_MNIST_LDP_Comparison_Annotated.png>)
+![Federated Learning LDP Comparison](<figures/FedAvg_LeNet_MNist_NIID_LDP_Comparison_Annotated.png>)
 
 **实验结论 (Conclusions):**
 
