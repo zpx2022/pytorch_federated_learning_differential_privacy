@@ -1,50 +1,27 @@
-# PyTorch实现的联邦学习基线方法
+### **关于此 Fork (About this Fork)**
 
-PyTorch-Federated-Learning 提供了使用PyTorch框架实现的各种联邦学习基线方法。代码库遵循客户端-服务器架构，非常直观和易于上手。
+**本项目是 [rruisong/pytorch_federated_learning](https://github.com/rruisong/pytorch_federated_learning) 的一个二次开发版本。** 我在此基础上，主要增加了**客户端差分隐私（Client-Side Differential Privacy）**的实现，以用于研究联邦学习中的隐私-效用权衡问题。
 
-如果你觉得这个仓库有用，请用你的小星星:star:支持一下。非常感谢！
+**主要修改点 (Key Modifications):**
+* 在客户端训练逻辑中，集成了**拉普拉斯噪声机制**，可在模型上传前对权重进行扰动。
+* 通过配置文件 (`test_config.yaml`) 可灵活开启/关闭差分隐私，并调整噪声强度。
+* 开展了系统的对比实验，以量化不同隐私保护等级对模型性能的影响。
 
-[英文](README.md)|[简体中文](README.zh-CN.md)<br>
+---
 
-* **当前的基线实现**: Pytorch 实现的联邦学习基线。目前支持的基线有 FedAvg、FedNova、FedProx 和 SCAFFOLD:
-  + [FedAvg](https://arxiv.org/abs/1602.05629) (Hugh Brendan McMahan et al., AISTATS 2017)
-  + [FedNova](https://arxiv.org/abs/2007.07481) (Jianyu Wang et al., NeurIPS 2020) [:octocat:](https://github.com/JYWa/FedNova) 
-  + [FedProx](https://arxiv.org/abs/1812.06127) (Tian Li et al., MLSys 2020) [:octocat:](https://github.com/litian96/FedProx) 
-  + [SCAFFOLD](https://arxiv.org/abs/1910.06378) (Sai Praneeth Karimireddy et al.,ICML 2020) [:octocat:](https://github.com/ki-ljl/Scaffold-Federated-Learning) 
- 
-* **数据集预处理**: 自动下载常用的公开数据集，并将其根据联邦学习特点分割给多个客户端，比如按照不同的非独立同分布要求进行分割。目前支持的数据集有 MNIST，Fashion-MNIST，SVHN，CIFAR-10，CIFAR-100。其他数据集需要手动下载。
-* **后处理**: 为评估而进行的训练结果可视化。
+### **核心实验成果展示 (Key Experimental Results)**
 
+本项目在病态非独立同分布（Non-IID, 每客户端2类）的挑战性环境下，对差分隐私的效用进行了评估。下图展示了在不同拉普拉斯噪声强度 (`b`)下，FedAvg算法在MNIST数据集上的性能表现：
 
-## 安装
+![Federated Learning LDP Comparison](<figures/FedAvg_LeNet_MNist_NIID_LDP_Comparison_Annotated.png>)
 
-### 依赖项
+**实验结论 (Conclusions):**
 
- - Python (3.8)
- - PyTorch (1.8.1)
- - OpenCV (4.5)
- - numpy (1.21.5)
+| 噪声强度 (b) | 最高准确率 (Max Acc) | 相比无噪声的准确率下降 | 首次达到最高准确率的轮次 |
+| :--- | :--- | :--- | :--- |
+| 0.00 (无噪声) | **98.75%** | - | 1962 |
+| 0.01 | **98.33%** | 0.42% | 1706 |
+| 0.03 | **97.42%** | 1.33% | 1939 |
+| 0.05 | **95.56%** | 3.19% | 1575 |
 
-
-### 安装要求
-
-运行: `pip install -r requirements.txt` to install the required packages.
-
-## 联邦数据集预处理
-
-此预处理旨在将整个数据集根据联邦设置分配给指定数量的客户端。根据每个本地数据集中的类别数量，整个数据集被划分为非独立同分布(Non-IID)数据集，这是根据标签分布偏斜来决定的。
-
-
-## 执行联邦学习基线
-
-### 测试运行
-在一个 yaml 文件中定义超参数，例如 "./config/test_config.yaml", 然后只需用这个配置运行：
-
-```
-python fl_main.py --config "./config/test_config.yaml"
-```
-
-
-## 性能评估
-
-运行 `python postprocessing/eval_main.py -rr 'results'` 以绘制测试精度和训练损失随着轮数或通信轮数的增加。注意，图中的标签是结果文件的名称。
+从数据中可以清晰地看到隐私与效用之间的非线性权衡关系。特别地，在噪声强度为0.01时，系统可在仅牺牲0.42%准确率的微小代价下，获得有效的隐私保护，找到了一个实际可行的平衡点。
