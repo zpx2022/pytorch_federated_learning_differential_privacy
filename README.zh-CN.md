@@ -1,7 +1,7 @@
 [English](README.md) | [简体中文](README.zh-CN.md)
 ### **关于此分支**
 
-**本项目是 [rruisong/pytorch_federated_learning](https://github.com/rruisong/pytorch_federated_learning) 的一个分支。**此分支的主要贡献是实现了**客户端差分隐私 (DP)**，用于研究联邦学习中的隐私-效用权衡。**有关环境设置、训练和评估的详细说明，请参阅原始代码库。**
+**本项目是 [rruisong/pytorch_federated_learning](https://github.com/rruisong/pytorch_federated_learning) 的一个分支。**此分支的主要贡献是实现了**客户端差分隐私 (LDP)**，用于研究联邦学习中的隐私-效用权衡。**有关环境设置、训练和评估的详细说明，请参阅原始代码库。**
 
 **主要修改：**
 * 在客户端训练逻辑中集成了**拉普拉斯噪声机制**，用于在模型权重上传到服务器之前对其进行扰动。
