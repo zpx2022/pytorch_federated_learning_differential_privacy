@@ -20,7 +20,7 @@ This project evaluates the effectiveness of Differential Privacy in a challengin
 | Noise Intensity (b) | Max Accuracy | Accuracy Drop vs. Baseline | Round of Max Accuracy |
 | :--- | :--- | :--- | :--- |
 | 0.00 (No Noise) | **98.75%** | - | 1962 |
-| 0.01 | **98.33%** | 0.42% | 1706 |
+| 0.01 | **98.33%** | 0.42% | 1721 |
 | 0.03 | **97.42%** | 1.33% | 1939 |
 | 0.05 | **95.56%** | 3.19% | 1575 |
 
