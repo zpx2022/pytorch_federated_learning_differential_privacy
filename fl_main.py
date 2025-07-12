@@ -1,120 +1,243 @@
-import torch
-import torchvision
-import torchvision.transforms as transforms
-from tqdm import tqdm
-from torch.utils.data import Subset
 import os
-import PIL
+import random
+import json
+import pickle
+import argparse
+import yaml
+import torch
+import numpy as np
+from json import JSONEncoder
+from tqdm import tqdm
+import concurrent.futures
+import multiprocessing as mp
 
-def load_data(name, root='./data', download=True):
+# Import all necessary client and server classes
+from fed_baselines.client_base import FedClient
+from fed_baselines.client_fedprox import FedProxClient
+from fed_baselines.client_scaffold import ScaffoldClient
+from fed_baselines.client_fednova import FedNovaClient
+from fed_baselines.server_base import FedServer
+from fed_baselines.server_scaffold import ScaffoldServer
+from fed_baselines.server_fednova import FedNovaServer
+
+# Assume these local modules exist in the project structure
+from postprocessing.recorder import Recorder
+from preprocessing.baselines_dataloader import divide_data
+from utils.models import *
+
+# --- Helper class for JSON serialization ---
+json_types = (list, dict, str, int, float, bool, type(None))
+class PythonObjectEncoder(JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, json_types):
+            return super().default(self, obj)
+        if isinstance(obj, torch.Tensor):
+            return obj.tolist()
+        return {'_python_object': pickle.dumps(obj).decode('latin-1')}
+
+def as_python_object(dct):
+    if '_python_object' in dct:
+        return pickle.loads(dct['_python_object'].encode('latin-1'))
+    return dct
+
+# --- Helper function for parallel client training ---
+def client_training_process(client, global_state_dict, fed_algo, scv_state=None):
     """
-    Loads a specified dataset from torchvision.
-    :param name: The name of the dataset (e.g., 'MNIST', 'CIFAR10').
-    :param root: The root directory for the dataset.
-    :param download: Whether to download the dataset if not found.
-    :return: A tuple of (trainset, testset, num_classes).
+    A wrapper function for a single client's training process to be executed in parallel.
+    It handles algorithm-specific update calls and returns all results from the client.
     """
-    data_dict = ['MNIST', 'EMNIST', 'FashionMNIST', 'CelebA', 'CIFAR10', 'QMNIST', 'SVHN', "IMAGENET", 'CIFAR100']
-    if name not in data_dict:
-        raise ValueError(f"Dataset {name} not supported.")
-
-    if not os.path.exists(root):
-        os.makedirs(root, exist_ok=True)
-
-    # Define transformations based on dataset
-    if name in ['MNIST', 'EMNIST', 'QMNIST']:
-        transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.1307,), (0.3081,))])
-    elif name == 'FashionMNIST':
-        transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.5,), (0.5,))])
-    elif name == 'CIFAR10':
-        transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize(mean=[0.4914, 0.4822, 0.4465], std=[0.2023, 0.1994, 0.2010])])
-    elif name == 'CIFAR100':
-        transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize([0.5, 0.5, 0.5], [0.5, 0.5, 0.5])])
-    elif name == 'SVHN':
-        transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
-    # Add other transformations as needed
-
-    # Load datasets
-    if name == 'MNIST':
-        trainset = torchvision.datasets.MNIST(root=root, train=True, download=download, transform=transform)
-        testset = torchvision.datasets.MNIST(root=root, train=False, download=download, transform=transform)
-    elif name == 'CIFAR10':
-        trainset = torchvision.datasets.CIFAR10(root=root, train=True, download=download, transform=transform)
-        testset = torchvision.datasets.CIFAR10(root=root, train=False, download=download, transform=transform)
-    # Add other dataset loading logic here
+    # Handle the special update call for SCAFFOLD
+    if fed_algo == 'SCAFFOLD' and scv_state is not None:
+        client.update(global_state_dict, scv_state)
+    else:
+        client.update(global_state_dict)
     
-    # Ensure targets are tensors
-    if hasattr(trainset, 'targets') and not isinstance(trainset.targets, torch.Tensor):
-        trainset.targets = torch.tensor(trainset.targets)
-    if hasattr(testset, 'targets') and not isinstance(testset.targets, torch.Tensor):
-        testset.targets = torch.tensor(testset.targets)
-
-    num_classes = len(trainset.classes) if hasattr(trainset, 'classes') else trainset.targets.max().item() + 1
+    # Execute local training and get all results
+    train_results = client.train()
     
-    return trainset, testset, num_classes
+    # Return client name and the complete results tuple
+    return client.name, train_results
 
-def divide_data(num_client=1, num_local_class=10, dataset_name='emnist', i_seed=0):
-    """
-    Divides the training dataset among clients to simulate a non-IID distribution.
-    Each client receives data from a specific number of classes.
-    :param num_client: The total number of clients.
-    :param num_local_class: The number of distinct classes on each client.
-    :param dataset_name: The name of the dataset to use.
-    :param i_seed: The random seed for reproducibility.
-    :return: A tuple of (trainset_config, testset).
-    """
-    torch.manual_seed(i_seed)
+# --- Checkpoint helper functions ---
+def save_checkpoint(checkpoint_path, global_round, global_state_dict, max_acc, patience_counter, recorder_res):
+    """Saves a training checkpoint."""
+    checkpoint = {
+        'global_round': global_round,
+        'global_state_dict': global_state_dict,
+        'max_acc': max_acc,
+        'patience_counter': patience_counter,
+        'recorder_res': recorder_res
+    }
+    torch.save(checkpoint, checkpoint_path)
+    print(f"Checkpoint saved to {checkpoint_path} at round {global_round}")
 
-    trainset, testset, num_classes = load_data(dataset_name, download=True)
+def load_checkpoint(checkpoint_path, fed_server, recorder):
+    """Loads a training checkpoint if it exists."""
+    if os.path.exists(checkpoint_path):
+        print(f"Loading checkpoint from {checkpoint_path}...")
+        checkpoint = torch.load(checkpoint_path)
+        
+        global_round = checkpoint['global_round']
+        global_state_dict = checkpoint['global_state_dict']
+        max_acc = checkpoint['max_acc']
+        patience_counter = checkpoint['patience_counter']
+        recorder.res = checkpoint['recorder_res']
 
-    if num_local_class == -1:
-        num_local_class = num_classes
-    assert 0 < num_local_class <= num_classes, "Number of local classes must be between 1 and total classes."
+        fed_server.model.load_state_dict(global_state_dict)
+        print(f"Checkpoint loaded. Resuming from round {global_round + 1}.")
+        return global_round, global_state_dict, max_acc, patience_counter
+    else:
+        print("No checkpoint found. Starting training from scratch.")
+        return 0, fed_server.state_dict(), 0, 0
 
-    # --- Step 1: Determine class distribution for each client ---
-    config_class = {f'f_{i:05d}': [] for i in range(num_client)}
-    config_division = {cls: 0 for cls in range(num_classes)}
-    for i in range(num_client):
-        client_name = f'f_{i:05d}'
-        for j in range(num_local_class):
-            cls = (i + j) % num_classes
-            config_class[client_name].append(cls)
-            config_division[cls] += 1
+# --- Main Program ---
+def fed_args():
+    """Parses command-line arguments."""
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--config', type=str, required=True, help='Yaml file for configuration')
+    args = parser.parse_args()
+    return args
+    
+def fed_run():
+    """Main function to run the federated learning framework."""
+    args = fed_args()
+    with open(args.config, "r") as yaml_file:
+        try:
+            config = yaml.safe_load(yaml_file)
+        except yaml.YAMLError as exc:
+            print(exc)
+    
+    # --- 1. Configuration and Initialization ---
+    system_config = config["system"]
+    client_config = config["client"]
+    fed_algo = client_config["fed_algo"]
+    
+    # Set random seeds for reproducibility
+    np.random.seed(system_config["i_seed"])
+    torch.manual_seed(system_config["i_seed"])
+    random.seed(system_config["i_seed"])
+
+    client_dict = {}
+    recorder = Recorder()
+    trainset_config, testset = divide_data(
+        num_client=system_config["num_client"], 
+        num_local_class=system_config["num_local_class"], 
+        dataset_name=system_config["dataset"],
+        i_seed=system_config["i_seed"]
+    )
+    
+    # Initialize clients based on the selected algorithm
+    for client_id in trainset_config['users']:
+        if fed_algo == 'FedAvg':
+            client_dict[client_id] = FedClient(client_id, dataset_id=system_config["dataset"], model_name=system_config["model"], config=client_config)
+        elif fed_algo == 'FedProx':
+            client_dict[client_id] = FedProxClient(client_id, dataset_id=system_config["dataset"], model_name=system_config["model"], config=client_config)
+        elif fed_algo == 'SCAFFOLD':
+            client_dict[client_id] = ScaffoldClient(client_id, dataset_id=system_config["dataset"], model_name=system_config["model"], config=client_config)
+        elif fed_algo == 'FedNova':
+            client_dict[client_id] = FedNovaClient(client_id, dataset_id=system_config["dataset"], model_name=system_config["model"], config=client_config)
+        client_dict[client_id].load_trainset(trainset_config['user_data'][client_id])
+
+    # Initialize the server based on the selected algorithm
+    if fed_algo in ['FedAvg', 'FedProx']:
+        fed_server = FedServer(trainset_config['users'], dataset_id=system_config["dataset"], model_name=system_config["model"], config=client_config)
+    elif fed_algo == 'SCAFFOLD':
+        fed_server = ScaffoldServer(trainset_config['users'], dataset_id=system_config["dataset"], model_name=system_config["model"], config=client_config)
+    elif fed_algo == 'FedNova':
+        fed_server = FedNovaServer(trainset_config['users'], dataset_id=system_config["dataset"], model_name=system_config["model"], config=client_config)
+    
+    fed_server.load_testset(testset)
+    early_stopping_patience = client_config.get('early_stopping_patience', 100)
+
+    # --- 2. Prepare Filenames and Paths ---
+    if not os.path.exists(system_config["res_root"]):
+        os.makedirs(system_config["res_root"])
+    if not os.path.exists(system_config["check_root"]):
+        os.makedirs(system_config["check_root"])
+
+    base_file_name = (f"['{client_config['fed_algo']}',"
+                      f"'{system_config['model']}',"
+                      f"{client_config['num_local_epoch']},"
+                      f"{system_config['num_local_class']},"
+                      f"{client_config['use_ldp']},"
+                      f"{client_config['laplace_noise_scale']}]")
+
+    result_file_path = os.path.join(system_config["res_root"], base_file_name + "_results.json")
+    checkpoint_file_path = os.path.join(system_config["check_root"], base_file_name + "_checkpoint.pth")
+
+    # --- 3. Load Checkpoint ---
+    initial_global_round, global_state_dict, max_acc, patience_counter = load_checkpoint(checkpoint_file_path, fed_server, recorder)
+    global_round_start = initial_global_round + 1 if initial_global_round > 0 else 0
+
+    # --- 4. Federated Learning Main Loop ---
+    pbar = tqdm(range(global_round_start, system_config["num_round"]), initial=global_round_start, total=system_config["num_round"], desc="Federated Learning Training")
+    for global_round in pbar:
+        
+        # Prepare extra arguments if needed (for SCAFFOLD)
+        scv_state = fed_server.scv.state_dict() if fed_algo == 'SCAFFOLD' else None
+
+        # Execute client training in parallel
+        with concurrent.futures.ProcessPoolExecutor(max_workers=mp.cpu_count()//2) as executor:
+            futures = [executor.submit(client_training_process, 
+                                       client_dict[client_id], 
+                                       global_state_dict,
+                                       fed_algo,
+                                       scv_state)
+                       for client_id in trainset_config['users']]
             
-    # --- Step 2: Partition data indices by class ---
-    config_data = {cls: [] for cls in range(num_classes)}
-    class_indices = {cls: (trainset.targets == cls).nonzero().squeeze() for cls in range(num_classes)}
-    
-    for cls in range(num_classes):
-        # Shuffle indices for randomness
-        perm = torch.randperm(len(class_indices[cls]))
-        shuffled_indices = class_indices[cls][perm]
-        
-        # Partition the shuffled indices for clients that need this class
-        num_partitions = config_division[cls]
-        partitions = torch.tensor_split(shuffled_indices, num_partitions)
-        config_data[cls] = list(partitions)
+            # Process results as they complete
+            for future in tqdm(concurrent.futures.as_completed(futures), total=len(futures), desc=f"Round {global_round+1}", leave=False):
+                try:
+                    c_name, train_results = future.result()
+                    
+                    # Unpack results and pass them to the server based on the algorithm
+                    if fed_algo in ['FedAvg', 'FedProx']:
+                        s_dict, n_data, loss = train_results
+                        fed_server.rec(c_name, s_dict, n_data, loss)
+                    elif fed_algo == 'SCAFFOLD':
+                        s_dict, n_data, loss, ccv_delta = train_results
+                        fed_server.rec(c_name, s_dict, n_data, loss, ccv_delta)
+                    elif fed_algo == 'FedNova':
+                        s_dict, n_data, loss, coeff, norm_grad = train_results
+                        fed_server.rec(c_name, s_dict, n_data, loss, coeff, norm_grad)
+                except Exception as e:
+                    print(f"A client training process failed: {e}")
 
-    # --- Step 3: Assign data partitions to clients ---
-    trainset_config = {'users': [], 'user_data': {}, 'num_samples': []}
-    # Keep track of which partition to assign next for each class
-    class_partition_pointers = {cls: 0 for cls in range(num_classes)}
+        # Perform global aggregation on the server
+        fed_server.select_clients()
+        global_state_dict, avg_loss, _ = fed_server.agg()
+        
+        # Test the new global model
+        accuracy = fed_server.test()
+        fed_server.flush()
 
-    for user in tqdm(sorted(config_class.keys()), desc="Dividing data"):
-        user_data_indices = []
-        for cls in config_class[user]:
-            partition_idx = class_partition_pointers[cls]
-            user_data_indices.append(config_data[cls][partition_idx])
-            class_partition_pointers[cls] += 1
-        
-        # Combine all indices for the current user
-        user_data_indices = torch.cat(user_data_indices).tolist()
-        
-        # Create a subset for the user
-        user_subset = Subset(trainset, user_data_indices)
-        
-        trainset_config['users'].append(user)
-        trainset_config['user_data'][user] = user_subset
-        trainset_config['num_samples'].append(len(user_subset))
+        # Record results
+        recorder.res['server']['iid_accuracy'].append(float(accuracy))
+        recorder.res['server']['train_loss'].append(float(avg_loss))
 
-    return trainset_config, testset
+        # Early stopping logic
+        if accuracy > max_acc:
+            max_acc = accuracy
+            patience_counter = 0
+        else:
+            patience_counter += 1
+
+        # Update progress bar description
+        pbar.set_description(
+            f'Round: {global_round + 1}| Loss: {avg_loss:.4f} | Acc: {accuracy:.4f}| Max Acc: {max_acc:.4f}| Patience: {patience_counter}'
+        )
+        
+        # --- 5. Save Results and Checkpoint ---
+        with open(result_file_path, "w") as jsfile:
+            json.dump(recorder.res, jsfile, cls=PythonObjectEncoder)
+        
+        save_checkpoint(checkpoint_file_path, global_round, global_state_dict, max_acc, patience_counter, recorder.res)
+        
+        if patience_counter >= early_stopping_patience:
+            print(f"\nEarly stopping at round {global_round+1}.")
+            break 
+
+    print(f"\nTraining finished. Results saved to {result_file_path}")
+
+if __name__ == "__main__":
+    fed_run()
