@@ -1,5 +1,5 @@
 [English](README.md) | [简体中文](README.zh-CN.md)
-# Combination of Federated Learning Baseline Algorithm and Laplace Mechanism-based Differential Privacy Technology
+# Combination of Federated Learning and Laplace Mechanism-based Differential Privacy Technology
 
 **Project Description：** This project is a fork of [rruisong/pytorch_federated_learning](https://github.com/rruisong/pytorch_federated_learning). I would like to express my gratitude to the original author for his basic work.
 
