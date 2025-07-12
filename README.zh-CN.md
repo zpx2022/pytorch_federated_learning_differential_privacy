@@ -1,5 +1,5 @@
 [English](README.md) | [简体中文](README.zh-CN.md)
-# 联邦学习基线算法和基于拉普拉斯机制的差分隐私技术的结合
+# 联邦学习和基于拉普拉斯机制的差分隐私技术的结合
 
 **项目说明：** 本项目是 [rruisong/pytorch_federated_learning](https://github.com/rruisong/pytorch_federated_learning) 的一个分支，本人对原作者的基础性工作表示感谢。
 
