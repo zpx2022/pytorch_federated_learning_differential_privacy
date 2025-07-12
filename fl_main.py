@@ -1,189 +1,120 @@
-#!/usr/bin/env python
-import os
-import random
-import json
-import pickle
-import argparse
-import yaml
-from json import JSONEncoder
+import torch
+import torchvision
+import torchvision.transforms as transforms
 from tqdm import tqdm
+from torch.utils.data import Subset
+import os
+import PIL
 
-from fed_baselines.client_base import FedClient
-from fed_baselines.client_fedprox import FedProxClient
-from fed_baselines.client_scaffold import ScaffoldClient
-from fed_baselines.client_fednova import FedNovaClient
-from fed_baselines.server_base import FedServer
-from fed_baselines.server_scaffold import ScaffoldServer
-from fed_baselines.server_fednova import FedNovaServer
-
-from postprocessing.recorder import Recorder
-from preprocessing.baselines_dataloader import divide_data
-from utils.models import *
-
-json_types = (list, dict, str, int, float, bool, type(None))
-
-
-class PythonObjectEncoder(JSONEncoder):
-    def default(self, obj):
-        if isinstance(obj, json_types):
-            return super().default(self, obj)
-        return {'_python_object': pickle.dumps(obj).decode('latin-1')}
-
-
-def as_python_object(dct):
-    if '_python_object' in dct:
-        return pickle.loads(dct['_python_object'].encode('latin-1'))
-    return dct
-
-
-def fed_args():
+def load_data(name, root='./data', download=True):
     """
-    Arguments for running federated learning baselines
-    :return: Arguments for federated learning baselines
+    Loads a specified dataset from torchvision.
+    :param name: The name of the dataset (e.g., 'MNIST', 'CIFAR10').
+    :param root: The root directory for the dataset.
+    :param download: Whether to download the dataset if not found.
+    :return: A tuple of (trainset, testset, num_classes).
     """
-    parser = argparse.ArgumentParser()
+    data_dict = ['MNIST', 'EMNIST', 'FashionMNIST', 'CelebA', 'CIFAR10', 'QMNIST', 'SVHN', "IMAGENET", 'CIFAR100']
+    if name not in data_dict:
+        raise ValueError(f"Dataset {name} not supported.")
 
-    parser.add_argument('--config', type=str, required=True, help='Yaml file for configuration')
+    if not os.path.exists(root):
+        os.makedirs(root, exist_ok=True)
 
-    args = parser.parse_args()
-    return args
+    # Define transformations based on dataset
+    if name in ['MNIST', 'EMNIST', 'QMNIST']:
+        transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.1307,), (0.3081,))])
+    elif name == 'FashionMNIST':
+        transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.5,), (0.5,))])
+    elif name == 'CIFAR10':
+        transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize(mean=[0.4914, 0.4822, 0.4465], std=[0.2023, 0.1994, 0.2010])])
+    elif name == 'CIFAR100':
+        transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize([0.5, 0.5, 0.5], [0.5, 0.5, 0.5])])
+    elif name == 'SVHN':
+        transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
+    # Add other transformations as needed
+
+    # Load datasets
+    if name == 'MNIST':
+        trainset = torchvision.datasets.MNIST(root=root, train=True, download=download, transform=transform)
+        testset = torchvision.datasets.MNIST(root=root, train=False, download=download, transform=transform)
+    elif name == 'CIFAR10':
+        trainset = torchvision.datasets.CIFAR10(root=root, train=True, download=download, transform=transform)
+        testset = torchvision.datasets.CIFAR10(root=root, train=False, download=download, transform=transform)
+    # Add other dataset loading logic here
     
+    # Ensure targets are tensors
+    if hasattr(trainset, 'targets') and not isinstance(trainset.targets, torch.Tensor):
+        trainset.targets = torch.tensor(trainset.targets)
+    if hasattr(testset, 'targets') and not isinstance(testset.targets, torch.Tensor):
+        testset.targets = torch.tensor(testset.targets)
 
-def fed_run():
-    """
-    Main function for the baselines of federated learning
-    """
-    args = fed_args()
-    with open(args.config, "r", encoding="utf-8") as yaml_file:
-        try:
-            config = yaml.safe_load(yaml_file)
-        except yaml.YAMLError as exc:
-            print(exc)
+    num_classes = len(trainset.classes) if hasattr(trainset, 'classes') else trainset.targets.max().item() + 1
     
-    algo_list = ["FedAvg", "SCAFFOLD", "FedProx", "FedNova"]
-    assert config["client"]["fed_algo"] in algo_list, "The federated learning algorithm is not supported"
+    return trainset, testset, num_classes
 
-    dataset_list = ['MNIST', 'CIFAR10', 'FashionMNIST', 'SVHN', 'CIFAR100']
-    assert config["system"]["dataset"] in dataset_list, "The dataset is not supported"
+def divide_data(num_client=1, num_local_class=10, dataset_name='emnist', i_seed=0):
+    """
+    Divides the training dataset among clients to simulate a non-IID distribution.
+    Each client receives data from a specific number of classes.
+    :param num_client: The total number of clients.
+    :param num_local_class: The number of distinct classes on each client.
+    :param dataset_name: The name of the dataset to use.
+    :param i_seed: The random seed for reproducibility.
+    :return: A tuple of (trainset_config, testset).
+    """
+    torch.manual_seed(i_seed)
 
-    model_list = ["LeNet", 'AlexCifarNet', "ResNet18", "ResNet34", "ResNet50", "ResNet101", "ResNet152", "CNN"]
-    assert config["system"]["model"] in model_list, "The model is not supported"
+    trainset, testset, num_classes = load_data(dataset_name, download=True)
 
-    np.random.seed(config["system"]["i_seed"])
-    torch.manual_seed(config["system"]["i_seed"])
-    random.seed(config["system"]["i_seed"])
+    if num_local_class == -1:
+        num_local_class = num_classes
+    assert 0 < num_local_class <= num_classes, "Number of local classes must be between 1 and total classes."
 
-    client_dict = {}
-    recorder = Recorder()
-
-    trainset_config, testset = divide_data(num_client=config["system"]["num_client"], num_local_class=config["system"]["num_local_class"], dataset_name=config["system"]["dataset"],
-                                           i_seed=config["system"]["i_seed"])
-    max_acc = 0
+    # --- Step 1: Determine class distribution for each client ---
+    config_class = {f'f_{i:05d}': [] for i in range(num_client)}
+    config_division = {cls: 0 for cls in range(num_classes)}
+    for i in range(num_client):
+        client_name = f'f_{i:05d}'
+        for j in range(num_local_class):
+            cls = (i + j) % num_classes
+            config_class[client_name].append(cls)
+            config_division[cls] += 1
+            
+    # --- Step 2: Partition data indices by class ---
+    config_data = {cls: [] for cls in range(num_classes)}
+    class_indices = {cls: (trainset.targets == cls).nonzero().squeeze() for cls in range(num_classes)}
     
-    use_ldp = config["client"].get("use_ldp", False)
-    ldp_noise_scale = config["client"].get("ldp_noise_scale", 0.0)
+    for cls in range(num_classes):
+        # Shuffle indices for randomness
+        perm = torch.randperm(len(class_indices[cls]))
+        shuffled_indices = class_indices[cls][perm]
+        
+        # Partition the shuffled indices for clients that need this class
+        num_partitions = config_division[cls]
+        partitions = torch.tensor_split(shuffled_indices, num_partitions)
+        config_data[cls] = list(partitions)
 
-    # Initialize the clients w.r.t. the federated learning algorithms and the specific federated settings
-    for client_id in trainset_config['users']:
-        if config["client"]["fed_algo"] == 'FedAvg':
-            client_dict[client_id] = FedClient(client_id, dataset_id=config["system"]["dataset"], 
-                                               epoch=config["client"]["num_local_epoch"], 
-                                               model_name=config["system"]["model"],
-                                               use_ldp=use_ldp,
-                                               ldp_noise_scale=ldp_noise_scale)
-        elif config["client"]["fed_algo"] == 'SCAFFOLD':
-            client_dict[client_id] = ScaffoldClient(client_id, dataset_id=config["system"]["dataset"], 
-                                                    epoch=config["client"]["num_local_epoch"], 
-                                                    model_name=config["system"]["model"],
-                                                    use_ldp=use_ldp,
-                                                    ldp_noise_scale=ldp_noise_scale)
-        elif config["client"]["fed_algo"] == 'FedProx':
-            client_dict[client_id] = FedProxClient(client_id, dataset_id=config["system"]["dataset"], 
-                                                   epoch=config["client"]["num_local_epoch"], 
-                                                   model_name=config["system"]["model"],
-                                                   use_ldp=use_ldp,
-                                                   ldp_noise_scale=ldp_noise_scale)
-        elif config["client"]["fed_algo"] == 'FedNova':
-            client_dict[client_id] = FedNovaClient(client_id, dataset_id=config["system"]["dataset"], 
-                                                   epoch=config["client"]["num_local_epoch"], 
-                                                   model_name=config["system"]["model"],
-                                                   use_ldp=use_ldp,
-                                                   ldp_noise_scale=ldp_noise_scale)
-        client_dict[client_id].load_trainset(trainset_config['user_data'][client_id])
+    # --- Step 3: Assign data partitions to clients ---
+    trainset_config = {'users': [], 'user_data': {}, 'num_samples': []}
+    # Keep track of which partition to assign next for each class
+    class_partition_pointers = {cls: 0 for cls in range(num_classes)}
 
-    # Initialize the clients w.r.t. the federated learning algorithms and the specific federated settings
-    if config["client"]["fed_algo"] == 'FedAvg':
-        fed_server = FedServer(trainset_config['users'], dataset_id=config["system"]["dataset"], model_name=config["system"]["model"])
-    elif config["client"]["fed_algo"] == 'SCAFFOLD':
-        fed_server = ScaffoldServer(trainset_config['users'], dataset_id=config["system"]["dataset"], model_name=config["system"]["model"])
-        scv_state = fed_server.scv.state_dict()
-    elif config["client"]["fed_algo"] == 'FedProx':
-        fed_server = FedServer(trainset_config['users'], dataset_id=config["system"]["dataset"], model_name=config["system"]["model"])
-    elif config["client"]["fed_algo"] == 'FedNova':
-        fed_server = FedNovaServer(trainset_config['users'], dataset_id=config["system"]["dataset"], model_name=config["system"]["model"])
-    fed_server.load_testset(testset)
-    global_state_dict = fed_server.state_dict()
+    for user in tqdm(sorted(config_class.keys()), desc="Dividing data"):
+        user_data_indices = []
+        for cls in config_class[user]:
+            partition_idx = class_partition_pointers[cls]
+            user_data_indices.append(config_data[cls][partition_idx])
+            class_partition_pointers[cls] += 1
+        
+        # Combine all indices for the current user
+        user_data_indices = torch.cat(user_data_indices).tolist()
+        
+        # Create a subset for the user
+        user_subset = Subset(trainset, user_data_indices)
+        
+        trainset_config['users'].append(user)
+        trainset_config['user_data'][user] = user_subset
+        trainset_config['num_samples'].append(len(user_subset))
 
-    # Main process of federated learning in multiple communication rounds
-    pbar = tqdm(range(config["system"]["num_round"]))
-    for global_round in pbar:
-        for client_id in trainset_config['users']:
-            # Local training
-            if config["client"]["fed_algo"] == 'FedAvg':
-                client_dict[client_id].update(global_state_dict)
-                state_dict, n_data, loss = client_dict[client_id].train()
-                fed_server.rec(client_dict[client_id].name, state_dict, n_data, loss)
-            elif config["client"]["fed_algo"] == 'SCAFFOLD':
-                client_dict[client_id].update(global_state_dict, scv_state)
-                state_dict, n_data, loss, delta_ccv_state = client_dict[client_id].train()
-                fed_server.rec(client_dict[client_id].name, state_dict, n_data, loss, delta_ccv_state)
-            elif config["client"]["fed_algo"] == 'FedProx':
-                client_dict[client_id].update(global_state_dict)
-                state_dict, n_data, loss = client_dict[client_id].train()
-                fed_server.rec(client_dict[client_id].name, state_dict, n_data, loss)
-            elif config["client"]["fed_algo"] == 'FedNova':
-                client_dict[client_id].update(global_state_dict)
-                state_dict, n_data, loss, coeff, norm_grad = client_dict[client_id].train()
-                fed_server.rec(client_dict[client_id].name, state_dict, n_data, loss, coeff, norm_grad)
-
-        # Global aggregation
-        fed_server.select_clients()
-        if config["client"]["fed_algo"] == 'FedAvg':
-            global_state_dict, avg_loss, _ = fed_server.agg()
-        elif config["client"]["fed_algo"] == 'SCAFFOLD':
-            global_state_dict, avg_loss, _, scv_state = fed_server.agg()
-        elif config["client"]["fed_algo"] == 'FedProx':
-            global_state_dict, avg_loss, _ = fed_server.agg()
-        elif config["client"]["fed_algo"] == 'FedNova':
-            global_state_dict, avg_loss, _ = fed_server.agg()
-
-        # Testing and flushing
-        accuracy = fed_server.test()
-        fed_server.flush()
-
-        # Record the results
-        recorder.res['server']['iid_accuracy'].append(accuracy)
-        recorder.res['server']['train_loss'].append(avg_loss)
-
-        if max_acc < accuracy:
-            max_acc = accuracy
-        pbar.set_description(
-            'Global Round: %d' % global_round +
-            '| Train loss: %.4f ' % avg_loss +
-            '| Accuracy: %.4f' % accuracy +
-            '| Max Acc: %.4f' % max_acc)
-
-        # Save the results
-        if not os.path.exists(config["system"]["res_root"]):
-            os.makedirs(config["system"]["res_root"])
-
-        with open(os.path.join(config["system"]["res_root"], '[\'%s\',' % config["client"]["fed_algo"] +
-                                        '\'%s\',' % config["system"]["model"] +
-                                        str(config["client"]["num_local_epoch"]) + ',' +
-                                        str(config["system"]["num_local_class"]) + ',' +
-                                        str(config["system"]["i_seed"])) + ']', "w") as jsfile:
-            json.dump(recorder.res, jsfile, cls=PythonObjectEncoder)
-
-
-if __name__ == "__main__":
-    fed_run()
+    return trainset_config, testset
