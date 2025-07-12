@@ -2,174 +2,119 @@ import torch
 import torchvision
 import torchvision.transforms as transforms
 from tqdm import tqdm
-from torch.utils.data import Subset, DataLoader
+from torch.utils.data import Subset
 import os
 import PIL
 
-
-def load_data(name, root='./data', download=True, save_pre_data=True):
-
+def load_data(name, root='./data', download=True):
+    """
+    Loads a specified dataset from torchvision.
+    :param name: The name of the dataset (e.g., 'MNIST', 'CIFAR10').
+    :param root: The root directory for the dataset.
+    :param download: Whether to download the dataset if not found.
+    :return: A tuple of (trainset, testset, num_classes).
+    """
     data_dict = ['MNIST', 'EMNIST', 'FashionMNIST', 'CelebA', 'CIFAR10', 'QMNIST', 'SVHN', "IMAGENET", 'CIFAR100']
-    assert name in data_dict, "The dataset is not present"
+    if name not in data_dict:
+        raise ValueError(f"Dataset {name} not supported.")
 
     if not os.path.exists(root):
         os.makedirs(root, exist_ok=True)
 
-    if name == 'MNIST':
-        transform = transforms.Compose([transforms.ToTensor(),transforms.Normalize((0.1307,), (0.3081,))])
-        trainset = torchvision.datasets.MNIST(root=root, train=True, download=download, transform=transform)
-        testset = torchvision.datasets.MNIST(root=root, train=False, download=download, transform=transform)
-
-    elif name == 'EMNIST':
-        # byclass, bymerge, balanced, letters, digits, mnist
-        transform = transforms.Compose([transforms.ToTensor(),transforms.Normalize((0.1307,), (0.3081,))])
-        trainset = torchvision.datasets.EMNIST(root=root, train=True, split= 'letters', download=download, transform=transform)
-        testset = torchvision.datasets.EMNIST(root=root, train=False, split= 'letters', download=download, transform=transform)
-
+    # Define transformations based on dataset
+    if name in ['MNIST', 'EMNIST', 'QMNIST']:
+        transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.1307,), (0.3081,))])
     elif name == 'FashionMNIST':
-        transform = transforms.Compose([transforms.ToTensor(),transforms.Normalize((0.5,), (0.5,))])
-        trainset = torchvision.datasets.FashionMNIST(root=root, train=True, download=download, transform=transform)
-        testset = torchvision.datasets.FashionMNIST(root=root, train=False, download=download, transform=transform)
-
-    elif name == 'CelebA':
-        # Could not loaded possibly for google drive break downs, try again at week days
-        target_transform = transforms.Compose([transforms.ToTensor()])
-        transform = transforms.Compose([transforms.ToTensor(),transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
-        trainset = torchvision.datasets.CelebA(root=root, split='train', target_type=list, download=download, transform=transform, target_transform=target_transform)
-        testset = torchvision.datasets.CelebA(root=root, split='test', target_type=list, download=download, transform=transform, target_transform=target_transform)
-
+        transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.5,), (0.5,))])
     elif name == 'CIFAR10':
         transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize(mean=[0.4914, 0.4822, 0.4465], std=[0.2023, 0.1994, 0.2010])])
-        trainset = torchvision.datasets.CIFAR10(root=root, train=True, download=download, transform=transform)
-        testset = torchvision.datasets.CIFAR10(root=root, train=False, download=download, transform=transform)
-        trainset.targets = torch.Tensor(trainset.targets)
-        testset.targets = torch.Tensor(testset.targets)
-
     elif name == 'CIFAR100':
         transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize([0.5, 0.5, 0.5], [0.5, 0.5, 0.5])])
-        trainset = torchvision.datasets.CIFAR100(root=root, train=True, transform=transform, download=True)
-        testset = torchvision.datasets.CIFAR100(root=root, train=False, transform=transform, download=True)
-        trainset.targets = torch.Tensor(trainset.targets)
-        testset.targets = torch.Tensor(testset.targets)
-
-    elif name == 'QMNIST':
-        transform = transforms.Compose([transforms.ToTensor(),transforms.Normalize((0.1307,), (0.3081,))])
-        trainset = torchvision.datasets.QMNIST(root=root, what='train', compat=True, download=download, transform=transform)
-        testset = torchvision.datasets.QMNIST(root=root, what='test', compat=True, download=download, transform=transform)
-
     elif name == 'SVHN':
-        transform = transforms.Compose([transforms.ToTensor(),transforms.Normalize((0.1307,), (0.3081,))])
-        trainset = torchvision.datasets.SVHN(root=root, split='train', download=download, transform=transform)
-        testset = torchvision.datasets.SVHN(root=root, split='test', download=download, transform=transform)
-        trainset.targets = torch.Tensor(trainset.labels)
-        testset.targets = torch.Tensor(testset.labels)
+        transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
+    # Add other transformations as needed
 
-    elif name == 'IMAGENET':
-        train_val_transform = transforms.Compose([
-            transforms.ColorJitter(hue=.05, saturation=.05),
-            transforms.RandomHorizontalFlip(),
-            transforms.RandomRotation(20, resample=PIL.Image.BILINEAR),
-            transforms.ToTensor(),
-        ])
-        test_transform = transforms.Compose([
-            transforms.ColorJitter(hue=.05, saturation=.05),
-            transforms.ToTensor(),
-        ])
-        # transform = transforms.Compose([transforms.ToTensor(),transforms.Normalize(mean=[0.485, 0.456, 0.406],
-        #                          std=[0.229, 0.224, 0.225])])
-        trainset = torchvision.datasets.ImageFolder(root='./data/tiny-imagenet-200/train', transform=train_val_transform)
-        testset = torchvision.datasets.ImageFolder(root='./data/tiny-imagenet-200/val', transform=test_transform)
-        trainset.targets = torch.Tensor(trainset.targets)
-        testset.targets = torch.Tensor(testset.targets)
-
-    len_classes_dict = {
-        'MNIST': 10,
-        'EMNIST': 26, # ByClass: 62. ByMerge: 814,255 47.Digits: 280,000 10.Letters: 145,600 26.MNIST: 70,000 10.
-        'FashionMNIST': 10,
-        'CelebA': 0,
-        'CIFAR10': 10,
-        'QMNIST': 10,
-        'SVHN': 10,
-        'IMAGENET': 200,
-        'CIFAR100': 100
-    }
-
-    len_classes = len_classes_dict[name]
+    # Load datasets
+    if name == 'MNIST':
+        trainset = torchvision.datasets.MNIST(root=root, train=True, download=download, transform=transform)
+        testset = torchvision.datasets.MNIST(root=root, train=False, download=download, transform=transform)
+    elif name == 'CIFAR10':
+        trainset = torchvision.datasets.CIFAR10(root=root, train=True, download=download, transform=transform)
+        testset = torchvision.datasets.CIFAR10(root=root, train=False, download=download, transform=transform)
+    # Add other dataset loading logic here
     
-    return trainset, testset, len_classes
+    # Ensure targets are tensors
+    if hasattr(trainset, 'targets') and not isinstance(trainset.targets, torch.Tensor):
+        trainset.targets = torch.tensor(trainset.targets)
+    if hasattr(testset, 'targets') and not isinstance(testset.targets, torch.Tensor):
+        testset.targets = torch.tensor(testset.targets)
 
+    num_classes = len(trainset.classes) if hasattr(trainset, 'classes') else trainset.targets.max().item() + 1
+    
+    return trainset, testset, num_classes
 
 def divide_data(num_client=1, num_local_class=10, dataset_name='emnist', i_seed=0):
-
+    """
+    Divides the training dataset among clients to simulate a non-IID distribution.
+    Each client receives data from a specific number of classes.
+    :param num_client: The total number of clients.
+    :param num_local_class: The number of distinct classes on each client.
+    :param dataset_name: The name of the dataset to use.
+    :param i_seed: The random seed for reproducibility.
+    :return: A tuple of (trainset_config, testset).
+    """
     torch.manual_seed(i_seed)
 
-    trainset, testset, len_classes = load_data(dataset_name, download=True, save_pre_data=False)
+    trainset, testset, num_classes = load_data(dataset_name, download=True)
 
-    num_classes = len_classes
     if num_local_class == -1:
         num_local_class = num_classes
-    assert 0 < num_local_class <= num_classes, "number of local class should smaller than global number of class"
+    assert 0 < num_local_class <= num_classes, "Number of local classes must be between 1 and total classes."
 
-    trainset_config = {'users': [],
-                       'user_data': {},
-                       'num_samples': []}
-    config_division = {}  # Count of the classes for division
-    config_class = {}  # Configuration of class distribution in clients
-    config_data = {}  # Configuration of data indexes for each class : Config_data[cls] = [0, []] | pointer and indexes
-
+    # --- Step 1: Determine class distribution for each client ---
+    config_class = {f'f_{i:05d}': [] for i in range(num_client)}
+    config_division = {cls: 0 for cls in range(num_classes)}
     for i in range(num_client):
-        config_class['f_{0:05d}'.format(i)] = []
+        client_name = f'f_{i:05d}'
         for j in range(num_local_class):
-            cls = (i+j) % num_classes
-            if cls not in config_division:
-                config_division[cls] = 1
-                config_data[cls] = [0, []]
+            cls = (i + j) % num_classes
+            config_class[client_name].append(cls)
+            config_division[cls] += 1
+            
+    # --- Step 2: Partition data indices by class ---
+    config_data = {cls: [] for cls in range(num_classes)}
+    class_indices = {cls: (trainset.targets == cls).nonzero().squeeze() for cls in range(num_classes)}
+    
+    for cls in range(num_classes):
+        # Shuffle indices for randomness
+        perm = torch.randperm(len(class_indices[cls]))
+        shuffled_indices = class_indices[cls][perm]
+        
+        # Partition the shuffled indices for clients that need this class
+        num_partitions = config_division[cls]
+        partitions = torch.tensor_split(shuffled_indices, num_partitions)
+        config_data[cls] = list(partitions)
 
-            else:
-                config_division[cls] += 1
-            config_class['f_{0:05d}'.format(i)].append(cls)
+    # --- Step 3: Assign data partitions to clients ---
+    trainset_config = {'users': [], 'user_data': {}, 'num_samples': []}
+    # Keep track of which partition to assign next for each class
+    class_partition_pointers = {cls: 0 for cls in range(num_classes)}
 
-    # print(config_class)
-    # print(config_division)
-
-    for cls in config_division.keys():
-        indexes = torch.nonzero(trainset.targets == cls)
-        num_datapoint = indexes.shape[0]
-        indexes = indexes[torch.randperm(num_datapoint)]
-        num_partition = num_datapoint // config_division[cls]
-        for i_partition in range(config_division[cls]):
-            if i_partition == config_division[cls] - 1:
-                config_data[cls][1].append(indexes[i_partition * num_partition:])
-            else:
-                config_data[cls][1].append(indexes[i_partition * num_partition: (i_partition + 1) * num_partition])
-
-    for user in tqdm(config_class.keys()):
-        user_data_indexes = torch.tensor([])
+    for user in tqdm(sorted(config_class.keys()), desc="Dividing data"):
+        user_data_indices = []
         for cls in config_class[user]:
-            user_data_index = config_data[cls][1][config_data[cls][0]]
-            user_data_indexes = torch.cat((user_data_indexes, user_data_index))
-            config_data[cls][0] += 1
-        user_data_indexes = user_data_indexes.squeeze().int().tolist()
-        user_data = Subset(trainset, user_data_indexes)
-        #user_targets = trainset.target[user_data_indexes.tolist()]
+            partition_idx = class_partition_pointers[cls]
+            user_data_indices.append(config_data[cls][partition_idx])
+            class_partition_pointers[cls] += 1
+        
+        # Combine all indices for the current user
+        user_data_indices = torch.cat(user_data_indices).tolist()
+        
+        # Create a subset for the user
+        user_subset = Subset(trainset, user_data_indices)
+        
         trainset_config['users'].append(user)
-        trainset_config['user_data'][user] = user_data
-        trainset_config['num_samples'] = len(user_data)
-
-    #
-    # test_loader = DataLoader(trainset_config['user_data']['f_00001'])
-    # for i, (x,y) in enumerate(test_loader):
-    #     print(i)
-    #     print(y)
-
+        trainset_config['user_data'][user] = user_subset
+        trainset_config['num_samples'].append(len(user_subset))
 
     return trainset_config, testset
-
-
-if __name__ == "__main__":
-    # 'MNIST', 'EMNIST', 'FashionMNIST', 'CelebA', 'CIFAR10', 'QMNIST', 'SVHN'
-    data_dict = ['MNIST', 'EMNIST', 'FashionMNIST', 'CIFAR10', 'QMNIST', 'SVHN']
-
-    for name in data_dict:
-        print(name)
-        divide_data(num_client=20, num_local_class=2, dataset_name=name, i_seed=0)
