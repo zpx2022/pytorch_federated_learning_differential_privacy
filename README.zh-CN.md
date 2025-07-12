@@ -1,27 +1,69 @@
 [English](README.md) | [简体中文](README.zh-CN.md)
-### **关于此分支**
+# 联邦学习基线算法和基于拉普拉斯机制的差分隐私技术的结合(Combination of Federated Learning Baseline Algorithm and Laplace Mechanism-based Differential Privacy Technology)
 
-**本项目是 [rruisong/pytorch_federated_learning](https://github.com/rruisong/pytorch_federated_learning) 的一个分支。**此分支的主要贡献是实现了**客户端差分隐私 (LDP)**，用于研究联邦学习中的隐私-效用权衡。**有关环境设置、训练和评估的详细说明，请参阅原始代码库。**
+**项目说明：** 本仓库Fork 自 `[https://github.com/rruisong/pytorch_federated_learning]`，我们对原作者提供的基础性工作表示感谢。
 
-**主要修改：**
-* 在客户端训练逻辑中集成了**拉普拉斯噪声机制**，用于在模型权重上传到服务器之前对其进行扰动。
-* 通过 test_config.yaml 文件灵活地实现差异隐私功能，允许用户轻松启用/禁用它并调整噪声强度。
-* 进行了系统的比较实验，以量化不同隐私级别对模型性能的影响。
----
+## ✨ 核心特性
 
-### **核心实验成果展示**
+相较于基础版本，本平台实现了一系列关键的功能增强和架构优化：
+- **支持本地差分隐私 (LDP)**: 集成了 LDP 机制，可通过配置开启梯度裁剪 (Gradient Clipping) 和拉普拉斯噪声 (Laplacian Noise) 添加，用于研究隐私保护下的联邦学习。
 
-本项目在病态非独立同分布（Non-IID, 每客户端2类）的挑战性环境下，对差分隐私的效用进行了评估。下图展示了在不同拉普拉斯噪声强度 (`b`)下，FedAvg算法在MNIST数据集上的性能表现：
+- **高效的并行模拟**: 利用 `concurrent.futures` 实现了客户端的**并行训练**，可充分利用多核 CPU 资源，显著缩短模拟所需时间。
 
-![Federated Learning LDP Comparison](<figures/FedAvg_LeNet_MNist_NIID_LDP_Comparison_Annotated.png>)
+- **提前终止**: 支持提前终止 (Early Stopping) 机制，当模型性能在设定的耐心值内不再提升时自动停止训练，节约计算资源。
 
-**实验结论:**
+- **断点续传**: 能够自动保存和加载训练检查点 (`checkpoint`)，方便从中断处恢复长时间的实验。
 
-| 噪声强度 (b) | 最高准确率 (Max Acc) | 相比无噪声的准确率下降 | 首次达到最高准确率的轮次 |
-| :--- | :--- | :--- | :--- |
-| 0.00 (无噪声) | **98.75%** | - | 1962 |
-| 0.01 | **98.33%** | 0.42% | 1721 |
-| 0.03 | **97.42%** | 1.33% | 1939 |
-| 0.05 | **95.56%** | 3.19% | 1575 |
+## ⚙️ 项目结构
 
-从数据中可以清晰地看到隐私与效用之间的非线性权衡关系。特别地，在噪声强度为0.01时，系统可在仅牺牲0.42%准确率的微小代价下，获得有效的隐私保护，找到了一个实际可行的平衡点。
+├── fed_baselines/         # 核心算法实现
+│   ├── client_base.py     # 客户端基类 (FedAvg)
+│   ├── server_base.py     # 服务器基类 (FedAvg)
+│   └── ...                # 其他算法实现
+├── preprocessing/           # 数据预处理
+│   └── baselines_dataloader.py # 数据加载与 Non-IID 划分
+├── postprocessing/          # 结果后处理
+│   └── recorder.py        # 结果记录与绘图
+├── utils/                   # 辅助工具
+│   ├── models.py          # 模型定义
+│   └── fed_utils.py       # 辅助函数
+├── fl_main.py               # 主训练程序
+├── eval_main.py             # 结果评估程序
+├── test_config.yaml         # 实验配置文件
+└── README.md
+
+
+## 🚀 快速开始
+
+### 1. 环境准备
+
+建议使用虚拟环境（如 `conda` 或 `venv`）来管理项目依赖。
+
+```bash
+# 克隆仓库
+git clone https://github.com/zpx2022/pytorch_federated_learning_differential_privacy.git
+cd pytorch_federated_learning_differential_privacy
+
+# (可选，推荐) 创建并激活 conda 虚拟环境
+conda create -n fldp python=3.8
+conda activate fldp
+
+# 安装依赖
+pip install -r requirements.txt
+```
+
+### 2.配置实验
+打开 test_config.yaml 文件，根据您的需求修改实验参数。
+
+### 3.运行训练
+执行主程序 fl_main.py 开始训练。所有结果和检查点将默认保存在 results/ 和 checkpoints/ 目录下。
+```bash
+python fl_main.py --config test_config.yaml
+```
+
+### 4.评估与可视化结果
+训练结束后，使用 eval_main.py 来绘制性能曲线图。
+```bash
+# 将 results/ 目录下的所有 .json 结果文件绘制成图
+python eval_main.py --sys-res_root results
+```
