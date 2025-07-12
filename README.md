@@ -17,21 +17,27 @@ Compared with the parent project, this project implements privacy protection bas
 ## ⚙️ Project structure
 
 ```text
-├── fed_baselines/ # Core algorithm implementation
-│ ├── client_base.py # Client base class (FedAvg)
-│ ├── server_base.py # Server base class (FedAvg)
-│ └── ... # Other algorithm implementations
-├── preprocessing/ # Data preprocessing
-│ └── baselines_dataloader.py # Data loading and Non-IID partitioning
-├── postprocessing/ # Result postprocessing
-│ └── recorder.py # Result recording and drawing
-├── utils/ # Auxiliary tools
-│ ├── models.py # Model definition
-│ └── fed_utils.py # Auxiliary functions
-├── fl_main.py # Main training program
-├── eval_main.py # Result evaluation program
-├── test_config.yaml # Experiment configuration file
-└── README.md
+├── config/                   # Storage of configuration files
+│   └── test_config.yaml      # Main experimental configuration files
+├── fed_baselines/            # Core algorithm implementation
+│   ├── client_base.py        # Client base class (implementation of FedAvg)
+│   ├── client_fedprox.py     # FedProx algorithm client
+│   ├── client_scaffold.py    # SCAFFOLD algorithm client
+│   ├── client_fednova.py     # FedNova client
+│   ├── server_base.py        # Server base class (implementation of FedAvg)
+│   ├── server_scaffold.py    # SCAFFOLD algorithm server
+│   └── server_fednova.py     # FedNova algorithm server
+├── figures/                  # Storage of generated charts
+├── postprocessing/           # Result post-processing
+│   ├── eval_main.py          # Main program for result evaluation and visualization
+│   └── recorder.py           # Result recording and drawing tool class
+├── preprocessing/            # Data preprocessing
+│   └── baselines_dataloader.py # Data loading and Non-IID partitioning
+├── utils/                    # Auxiliary tools
+│   ├── models.py             # Neural network model definition
+│   └── fed_utils.py          # Federated learning auxiliary function
+├── fl_main.py                # Federated learning main training program
+└── requirements.txt          # Python dependency package list
 ```
 
 ## 🚀 Quick Start
