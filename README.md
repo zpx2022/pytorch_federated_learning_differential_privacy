@@ -1,32 +1,67 @@
 [English](README.md) | [简体中文](README.zh-CN.md)
-### **About this Fork**
+# Combination of Federated Learning Baseline Algorithm and Laplace Mechanism-based Differential Privacy Technology
 
-**This project is a fork of [rruisong/pytorch_federated_learning](https://github.com/rruisong/pytorch_federated_learning).** The main contribution of this fork is the implementation of **client-side Differential Privacy (DP)** to study the privacy-utility trade-off in Federated Learning. **For detailed instructions on environment setup, training, and evaluation, please refer to the original repository.**
+**Project Description：** This project is a fork of [rruisong/pytorch_federated_learning](https://github.com/rruisong/pytorch_federated_learning). I would like to express my gratitude to the original author for his basic work.
 
-**Key Modifications:**
-* Integrated a **Laplace noise mechanism** into the client-side training logic to perturb model weights before they are uploaded to the server.
-* Made the Differential Privacy feature flexible via the `test_config.yaml` file, allowing users to easily enable/disable it and adjust the noise intensity.
-* Conducted systematic, comparative experiments to quantify the impact of different privacy levels on model performance.
----
+## ✨ Core Features
 
-### **Key Experimental Results**
+Compared with the parent project, this project implements privacy protection based on the Laplace mechanism and makes a series of architectural optimizations:
+- **Support for Local Differential Privacy (LDP)**: The LDP mechanism is integrated, and gradient clipping and Laplacian noise can be added by configuration to study federated learning under privacy protection.
 
-This project evaluates the effectiveness of Differential Privacy in a challenging **pathological Non-IID setting (2 classes per client)**. The plot below shows the performance of the FedAvg algorithm on the MNIST dataset under different levels of Laplace noise intensity (`b`).
+- **Efficient parallel simulation**: The client's **parallel training** is implemented using `concurrent.futures`, which can make full use of multi-core CPU resources and significantly shorten the simulation time.
 
-![Federated Learning LDP Comparison](<figures/FedAvg_LeNet_MNist_NIID_LDP_Comparison_Annotated.png>)
+- **Early Termination**: Supports the Early Stopping mechanism, which automatically stops training when the model performance no longer improves within the set patience value, saving computing resources.
 
-**Experimental Conclusions:**
+- **Breakpoint Resume**: It can automatically save and load training checkpoints (`checkpoint`), making it easy to resume long experiments from interruptions.
 
-| Noise Intensity (b) | Max Accuracy | Accuracy Drop vs. Baseline | Round of Max Accuracy |
-| :--- | :--- | :--- | :--- |
-| 0.00 (No Noise) | **98.75%** | - | 1962 |
-| 0.01 | **98.33%** | 0.42% | 1721 |
-| 0.03 | **97.42%** | 1.33% | 1939 |
-| 0.05 | **95.56%** | 3.19% | 1575 |
+## ⚙️ Project structure
 
-The data clearly illustrates the non-linear trade-off between privacy and utility. Notably, at a noise intensity of 0.01, the system can achieve effective privacy protection at the minimal cost of only a 0.42% drop in accuracy, identifying a practical balance point for real-world deployment.
+```text
+├── fed_baselines/ # Core algorithm implementation
+│ ├── client_base.py # Client base class (FedAvg)
+│ ├── server_base.py # Server base class (FedAvg)
+│ └── ... # Other algorithm implementations
+├── preprocessing/ # Data preprocessing
+│ └── baselines_dataloader.py # Data loading and Non-IID partitioning
+├── postprocessing/ # Result postprocessing
+│ └── recorder.py # Result recording and drawing
+├── utils/ # Auxiliary tools
+│ ├── models.py # Model definition
+│ └── fed_utils.py # Auxiliary functions
+├── fl_main.py # Main training program
+├── eval_main.py # Result evaluation program
+├── test_config.yaml # Experiment configuration file
+└── README.md
+```
 
+## 🚀 Quick Start
 
+### 1. Environment preparation
 
+It is recommended to use a virtual environment (such as `conda` or `venv`) to manage project dependencies.
 
+```bash
+# Clone the repository
+git clone https://github.com/zpx2022/pytorch_federated_learning_differential_privacy.git
+cd pytorch_federated_learning_differential_privacy
 
+# (Optional, recommended) Create and activate the conda virtual environment
+conda create -n fldp python=3.8
+conda activate fldp
+
+# Install dependencies
+pip install -r requirements.txt
+```
+
+### 2. Configure the experiment
+Open the test_config.yaml file and modify the experimental parameters according to your needs.
+
+### 3. Run training
+Execute the main program fl_main.py to start training. All results and checkpoints will be saved in the results/ and checkpoints/ directories by default.
+```bash
+python fl_main.py --config test_config.yaml
+```
+
+### 4. Evaluate and visualize results
+# Draw all .json result files in the results/ directory into a graph
+python eval_main.py --sys-res_root results
