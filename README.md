@@ -13,6 +13,7 @@ Compared with the parent project, this project implements privacy protection bas
 - **Early Termination**: Supports the Early Stopping mechanism, which automatically stops training when the model performance no longer improves within the set patience value, saving computing resources.
 
 - **Breakpoint Resume**: It can automatically save and load training checkpoints (`checkpoint`), making it easy to resume long experiments from interruptions.
+- **Elegant architecture design**: The client architecture was reconstructed using the "template method" design pattern, eliminating the redundancy of repeatedly writing training loops in each algorithm, significantly improving the maintainability and scalability of the code.
 
 ## ⚙️ Project structure
 
