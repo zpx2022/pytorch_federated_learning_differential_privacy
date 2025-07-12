@@ -63,5 +63,7 @@ python fl_main.py --config test_config.yaml
 ```
 
 ### 4. Evaluate and visualize results
-# Draw all .json result files in the results/ directory into a graph
+Draw all .json result files in the results/ directory into a graph
+```bash
 python eval_main.py --sys-res_root results
+```
