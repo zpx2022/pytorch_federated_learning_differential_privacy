@@ -16,23 +16,17 @@ class ScaffoldServer(FedServer):
         self.client_ccv_deltas = {}
 
     def agg(self):
-        """Aggregates models and updates the server control variate."""
+        """
+        Aggregates models and updates the server control variate.
+        Model aggregation is handled by the parent class's agg method.
+        """
         if not self.selected_clients or self.n_data == 0:
             return self.model.state_dict(), 0, {}
 
-        # --- Part 1: Aggregate client models (standard FedAvg) ---
-        avg_loss = 0.0
-        model_state = self.model.state_dict()
-        for key in model_state:
-            model_state[key] = torch.zeros_like(model_state[key])
-
-        for name in self.selected_clients:
-            if name in self.client_state:
-                weight = self.client_n_data[name] / self.n_data
-                for key in model_state:
-                    model_state[key] += self.client_state[name][key] * weight
-                avg_loss += self.client_loss[name] * weight
-        self.model.load_state_dict(model_state)
+        # --- Part 1: Perform model aggregation by calling the parent's method ---
+        # The super().agg() call executes FedAvg and updates self.model.
+        # It also increments self.round, so we don't need to do it again here.
+        model_state, avg_loss, _ = super().agg()
 
         # --- Part 2: Aggregate client control variate deltas (delta_c_i) ---
         total_delta_c = {key: 0.0 for key in self.scv.state_dict().keys()}
@@ -49,7 +43,7 @@ class ScaffoldServer(FedServer):
                     scv_state[key] += total_delta_c[key] / len(self.selected_clients)
         self.scv.load_state_dict(scv_state)
 
-        self.round += 1
+        # self.round is already incremented in super().agg()
         return self.model.state_dict(), avg_loss, self.scv.state_dict()
 
     def rec(self, name, state_dict, n_data, loss, ccv_delta):
