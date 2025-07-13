@@ -21,24 +21,9 @@ from fed_baselines.server_scaffold import ScaffoldServer
 from fed_baselines.server_fednova import FedNovaServer
 
 # Assume these local modules exist in the project structure
-from postprocessing.recorder import Recorder
+from postprocessing.recorder import PythonObjectEncoder, Recorder
 from preprocessing.baselines_dataloader import divide_data
 from utils.models import *
-
-# --- Helper class for JSON serialization ---
-json_types = (list, dict, str, int, float, bool, type(None))
-class PythonObjectEncoder(JSONEncoder):
-    def default(self, obj):
-        if isinstance(obj, json_types):
-            return super().default(self, obj)
-        if isinstance(obj, torch.Tensor):
-            return obj.tolist()
-        return {'_python_object': pickle.dumps(obj).decode('latin-1')}
-
-def as_python_object(dct):
-    if '_python_object' in dct:
-        return pickle.loads(dct['_python_object'].encode('latin-1'))
-    return dct
 
 # --- Helper function for parallel client training ---
 def client_training_process(client, global_state_dict, fed_algo, scv_state=None):
@@ -69,7 +54,7 @@ def save_checkpoint(checkpoint_path, global_round, global_state_dict, max_acc, p
         'recorder_res': recorder_res
     }
     torch.save(checkpoint, checkpoint_path)
-    print(f"Checkpoint saved to {checkpoint_path} at round {global_round}")
+    # print(f"Checkpoint saved to {checkpoint_path} at round {global_round}") # ⭐️ MODIFICATION: Commented out to keep the progress bar clean
 
 def load_checkpoint(checkpoint_path, fed_server, recorder):
     """Loads a training checkpoint if it exists."""
@@ -186,7 +171,7 @@ def fed_run():
                        for client_id in trainset_config['users']]
             
             # Process results as they complete
-            for future in tqdm(concurrent.futures.as_completed(futures), total=len(futures), desc=f"Round {global_round+1}", leave=False):
+            for future in concurrent.futures.as_completed(futures):
                 try:
                     c_name, train_results = future.result()
                     
