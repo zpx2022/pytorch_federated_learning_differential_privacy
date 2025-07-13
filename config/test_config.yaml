@@ -1,10 +1,10 @@
 system:
-  num_client: 50
+  num_client: 100
   num_local_class: 2
   dataset: "MNIST"
   model: "LeNet"
   i_seed: 235235
-  num_round: 4000
+  num_round: 2000
   res_root: "results"
   check_root: "checkpoints" # Root directory of checkpoint file
 
@@ -18,4 +18,4 @@ client:
   use_ldp: False                  # Control flag for Local Differential Privacy
   grad_clip_norm: 1.0      # Norm threshold for gradient clipping
   laplace_noise_scale: 0.00    # Scale parameter for Laplace noise
-  early_stopping_patience: 200 # Patience value for early stopping
+  early_stopping_patience: 100 # Patience value for early stopping
