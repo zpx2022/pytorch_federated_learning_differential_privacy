@@ -76,3 +76,5 @@ python fl_main.py --config test_config.yaml
 # 将 results/ 目录下的所有 .json 结果文件绘制成图
 python eval_main.py --sys-res_root results
 ```
+
+![不同噪声强度准确度&损失变化对比图]{figures/FedAvg_LeNet_MNist_NIID_LDP_Comparison_Annotated.png}
