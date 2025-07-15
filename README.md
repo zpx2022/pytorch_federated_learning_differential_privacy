@@ -75,7 +75,7 @@ Draw all .json result files in the results/ directory into a graph
 python eval_main.py --sys-res_root results
 ```
 
-## Experimental results and analysis
+## 📈 Experimental results and analysis
 
 ![Comparison of accuracy and loss curves for different noise intensities](figures/FedAvg_LeNet_MNIST_NIID_LDP_Comparison_Annotated.png)
 
