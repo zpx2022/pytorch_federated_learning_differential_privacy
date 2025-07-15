@@ -74,3 +74,28 @@ Draw all .json result files in the results/ directory into a graph
 ```bash
 python eval_main.py --sys-res_root results
 ```
+
+## Experimental results and analysis
+
+![Comparison of accuracy and loss curves for different noise intensities](figures/FedAvg_LeNet_MNIST_NIID_LDP_Comparison_Annotated.png)
+
+I conducted experiments on the highly non-IID MNIST dataset (each client only has 2 categories of data) to evaluate the impact of different intensities of Laplace noise (`laplace_noise_scale` from `0.0` to `0.1`) on the performance of the FedAvg algorithm.
+...
+
+The basis for selecting Laplace noise intensity: MNist is a handwritten dataset with 10 categories (0-9), which is low-sensitivity data. We can adopt a utility-first strategy, that is, the `max acc` loss is required to be less than `0.01`, and the privacy budget is `>=10`. According to the formula of privacy budget = `sensitivity`/`noise intensity` (sensitivity is similar to the value of the hyperparameter `grad_clip_norm`, which is `1.0`), the noise intensity should be `<=0.1`. To narrow the range, the privacy budget is set to `<=20`. At this time, the noise intensity range is `[0.05,0.1]`, and `0.05`, `0.06`, `0.07`, `0.08`, `0.09`, `0.1` are selected.
+
+### 1\. Comparison of test accuracy
+
+The first sub-figure shows how the test accuracy of the global model changes with the number of communication rounds under different noise intensities. From the accuracy curve, we can clearly observe the following points:
+
+* **Privacy-utility trade-off**: The overall trend shows that as the noise intensity increases, the final convergence performance (maximum accuracy) of the model will decrease. This intuitively demonstrates the classic "privacy-utility trade-off" in differential privacy - in order to enhance privacy protection, part of the model's performance needs to be sacrificed. Based on the utility-first strategy, the `max acc` loss of experiments with noise intensities of `0.05`, `0.06`, and `0.07` is less than `0.01`, which can all be used as effective local differential privacy parameter settings.
+
+* **Convergence speed**: In general, the larger the noise intensity of the experiment, the smaller the rounds corresponding to the model reaching the final convergence performance (maximum accuracy), that is, **the faster it reaches the performance bottleneck**.
+
+### 2\. Training loss comparison
+
+The second sub-figure shows the impact of different noise intensities on the average training loss of the global model. The trend of the loss curve is consistent with the accuracy curve:
+
+* **Fitting difficulty**: The higher the noise intensity, the higher the training loss, indicating that the injected noise increases the difficulty of the model fitting local data and affects the learning process.
+
+* **Stability**: The loss curve of the low noise (such as `0.0`, `0.05`) experiment drops more smoothly, while the curve of the high noise experiment shows more violent fluctuations.
