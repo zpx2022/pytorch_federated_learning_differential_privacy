@@ -77,7 +77,7 @@ python fl_main.py --config test_config.yaml
 python eval_main.py --sys-res_root results
 ```
 
-## 实验结果与分析
+## 📈 实验结果与分析
 
 ![不同噪声强度对应准确度&损失变化曲线对比图](figures/FedAvg_LeNet_MNIST_NIID_LDP_Comparison_Annotated.png)
 
