@@ -44,7 +44,25 @@ class Recorder(object):
         """
         fig, axes = plt.subplots(nrows=2, ncols=1, figsize=(12, 14))
         
-        for i, (res, label) in enumerate(self.res_list):
+        # --- Step 1: Pre-process to get data for sorting ---
+        plot_data_with_key = []
+        for res, label in self.res_list:
+            accuracy_curve = res['server']['iid_accuracy']
+            if accuracy_curve:
+                max_acc = max(accuracy_curve)
+                # Key for sorting: the round number where max_acc was achieved
+                sort_key = accuracy_curve.index(max_acc) 
+                plot_data_with_key.append({'sort_key': sort_key, 'res': res, 'label': label})
+        
+        # --- Step 2: Sort the data based on the key (max_acc_round) in descending order ---
+        # We sort by the round number (our 'sort_key'), from largest to smallest.
+        sorted_plot_data = sorted(plot_data_with_key, key=lambda x: x['sort_key'], reverse=True)
+
+        # --- Step 3: Plot based on the new sorted order ---
+        for i, data_item in enumerate(sorted_plot_data):
+            res = data_item['res']
+            label = data_item['label']
+            
             # Plot accuracy curve
             accuracy_curve = res['server']['iid_accuracy']
             if accuracy_curve:
@@ -61,9 +79,9 @@ class Recorder(object):
                 # Draw a vertical dashed line at the round of max accuracy
                 axes[0].axvline(x=max_acc_round, color=line_color, linestyle='--', linewidth=1.5, alpha=0.7)
                 
-                # Position text annotation to avoid overlap
+                # Apply the alternating logic based on the *new sorted order* `i`
                 if i % 2 == 0:
-                    y_position = max_acc - 0.015 
+                    y_position = max_acc - 0.015
                     vertical_align = 'top'
                 else:
                     y_position = max_acc + 0.005
@@ -86,6 +104,7 @@ class Recorder(object):
             loss_curve = res['server']['train_loss']
             if loss_curve:
                 rounds = np.arange(1, len(loss_curve) + 1)
+                # Note: The loss curves are also plotted in the new sorted order.
                 axes[1].plot(rounds, np.array(loss_curve), label=label, alpha=1, linewidth=2)
 
         # Configure plot aesthetics
