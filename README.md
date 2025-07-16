@@ -88,7 +88,7 @@ The basis for selecting Laplace noise intensity: MNist is a handwritten dataset 
 
 The first sub-figure shows how the test accuracy of the global model changes with the number of communication rounds under different noise intensities. From the accuracy curve, we can clearly observe the following points:
 
-* **Privacy-utility trade-off**: The overall trend shows that as the noise intensity increases, the final convergence performance (maximum accuracy) of the model will decrease. This intuitively demonstrates the classic "privacy-utility trade-off" in differential privacy - in order to enhance privacy protection, part of the model's performance needs to be sacrificed. Based on the utility-first strategy, the `max acc` loss of experiments with noise intensities of `0.05`, `0.06`, and `0.07` is less than `0.01`, which can all be used as effective local differential privacy parameter settings.
+* **Privacy-utility trade-off**: The overall trend shows that as the noise intensity increases, the final convergence performance (maximum accuracy) of the model will decrease. This intuitively demonstrates the classic "privacy-utility trade-off" in differential privacy - in order to enhance privacy protection, part of the model's performance needs to be sacrificed. Based on the utility-first strategy, the `max acc` loss of experiments with noise intensities of `0.05`, `0.06`, `0.07` and `0.08` is less than `0.01`, which can all be used as effective local differential privacy parameter settings.
 
 * **Convergence speed**: In general, the larger the noise intensity of the experiment, the smaller the rounds corresponding to the model reaching the final convergence performance (maximum accuracy), that is, **the faster it reaches the performance bottleneck**.
 
