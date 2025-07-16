@@ -82,7 +82,7 @@ python eval_main.py --sys-res_root results
 I conducted experiments on the highly non-IID MNIST dataset (each client only has 2 categories of data) to evaluate the impact of different intensities of Laplace noise (`laplace_noise_scale` from `0.0` to `0.1`) on the performance of the FedAvg algorithm.
 
 
-The basis for selecting Laplace noise intensity: MNist is a handwritten dataset with 10 categories (0-9), which is low-sensitivity data. We can adopt a utility-first strategy, that is, the `max acc` loss is required to be less than `0.01`, and the privacy budget is `>=10`. According to the formula of privacy budget = `sensitivity`/`noise intensity` (sensitivity is similar to the value of the hyperparameter `grad_clip_norm`, which is `1.0`), the noise intensity should be `<=0.1`. To narrow the range, the privacy budget is set to `<=20`. At this time, the noise intensity range is `[0.05,0.1]`, and `0.05`, `0.06`, `0.07`, `0.08`, `0.09`, `0.1` are selected.
+The basis for selecting Laplace noise intensity: MNist is a handwritten dataset with 10 categories (0-9), which is low-sensitivity data. We can adopt a utility-first strategy, that is, the `max acc` loss is required to be less than `0.01`, and the privacy budget per round is `>=10`. According to the formula of privacy budget per round = `sensitivity`/`noise intensity` (sensitivity is similar to the value of the hyperparameter `grad_clip_norm`, which is `1.0`), the noise intensity should be `<=0.1`. To narrow the range, the privacy budget is set to `<=20`. At this time, the noise intensity range is `[0.05,0.1]`, and `0.05`, `0.06`, `0.07`, `0.08`, `0.09`, `0.1` are selected.
 
 ### 1\. Comparison of test accuracy
 
