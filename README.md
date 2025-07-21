@@ -117,6 +117,7 @@ In order to explore the impact of privacy protection while ensuring high availab
 - Theoretical formula:
 
 According to the definition of the Laplace mechanism in differential privacy, the relationship between the privacy budget ε and the noise intensity λ is:
+
 $$
 \epsilon = \frac{\Delta s}{\lambda}
 $$
