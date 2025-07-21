@@ -21,7 +21,7 @@ class ScaffoldServer(FedServer):
         Model aggregation is handled by the parent class's agg method.
         """
         if not self.selected_clients or self.n_data == 0:
-            return self.model.state_dict(), 0, {}
+            return self.model.state_dict(), 0
 
         # --- Part 1: Perform model aggregation by calling the parent's method ---
         # The super().agg() call executes FedAvg and updates self.model.
@@ -44,7 +44,7 @@ class ScaffoldServer(FedServer):
         self.scv.load_state_dict(scv_state)
 
         # self.round is already incremented in super().agg()
-        return self.model.state_dict(), avg_loss, self.scv.state_dict()
+        return self.model.state_dict(), avg_loss
 
     def rec(self, name, state_dict, n_data, loss, ccv_delta):
         """SCAFFOLD-specific receive method for the control variate delta."""
