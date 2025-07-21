@@ -124,19 +124,19 @@ $$
 
 - **Parameter definition**:
 
-- **ε**: Single-round privacy budget.
+  - **ε**: Single-round privacy budget.
 
-- **Δs**: Sensitivity. In this scenario, we use gradient clipping, so the sensitivity is defined by the clipping norm `grad_clip_norm`, whose value is `1.0`.
+  - **Δs**: Sensitivity. In this scenario, we use gradient clipping, so the sensitivity is defined by the clipping norm `grad_clip_norm`, whose value is `1.0`.
 
-- **λ**: The strength of Laplace noise (Noise strength), corresponding to the hyperparameter `laplace_noise_scale`.
+  - **λ**: The strength of Laplace noise (Noise strength), corresponding to the hyperparameter `laplace_noise_scale`.
 
-- Derivation and selection:
+- **Derivation and selection**:
 
-Based on the above formulas and parameters, we can derive the range of noise intensity:
+  Based on the above formulas and parameters, we can derive the range of noise intensity:
 
-- When **ε ≥ 10**, we can get **λ ≤ 1.0 / 10 = 0.1**.
+  - When **ε ≥ 10**, we can get **λ ≤ 1.0 / 10 = 0.1**.
 
-- When **ε ≤ 20**, we can get **λ ≥ 1.0 / 20 = 0.05**.
+  - When **ε ≤ 20**, we can get **λ ≥ 1.0 / 20 = 0.05**.
 
 Finally, we set the exploration range of noise intensity **λ** to the **`[0.05, 0.1]`** interval and evenly take values for experiments to observe in detail the trend of model performance changing with privacy budget.
 
