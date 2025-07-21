@@ -100,7 +100,7 @@ $$
 $$
 
 
-- **参数定义**:
+- 参数定义:
 
   - **ε**：单轮隐私预算 (Single-round privacy budget)。
   - **Δs**：敏感度 (Sensitivity)。在此场景下，我们使用梯度裁剪，因此敏感度由裁剪范数 `grad_clip_norm` 定义，其值为 `1.0`。
