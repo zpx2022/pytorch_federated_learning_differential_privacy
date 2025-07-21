@@ -88,7 +88,7 @@ class FedServer(object):
         
         self.model.load_state_dict(model_state)
         self.round += 1
-        return model_state, avg_loss, self.n_data
+        return model_state, avg_loss
 
     def rec(self, name, state_dict, n_data, loss):
         """Server receives local updates from a client."""
