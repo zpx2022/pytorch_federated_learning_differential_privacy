@@ -94,9 +94,9 @@ python eval_main.py --sys-res_root results
 - 理论公式：
 
   根据差分隐私中拉普拉斯机制的定义，隐私预算 ε 与噪声强度 λ 的关系为：
-$$
+
 \epsilon = \frac{\Delta s}{\lambda}
-$$
+
 
 - **参数定义**:
 
