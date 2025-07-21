@@ -1,4 +1,5 @@
 import copy
+import torch
 from fed_baselines.server_base import FedServer
 
 class FedNovaServer(FedServer):
@@ -13,7 +14,7 @@ class FedNovaServer(FedServer):
     def agg(self):
         """Aggregates models from clients using FedNova logic."""
         if not self.selected_clients or self.n_data == 0:
-            return self.model.state_dict(), 0, {}
+            return self.model.state_dict(), 0
 
         self.model.to(self._device)
         model_state = self.model.state_dict()
@@ -44,7 +45,7 @@ class FedNovaServer(FedServer):
         avg_loss = avg_loss / self.n_data if self.n_data != 0 else 0
 
         self.round += 1
-        return model_state, avg_loss, {}
+        return model_state, avg_loss
 
     def rec(self, name, state_dict, n_data, loss, coeff, norm_grad):
         """FedNova-specific receive method for extra parameters."""
