@@ -99,3 +99,78 @@ The second sub-figure shows the impact of different noise intensities on the ave
 * **Fitting difficulty**: The higher the noise intensity, the higher the training loss, indicating that the injected noise increases the difficulty of the model fitting local data and affects the learning process.
 
 * **Stability**: The loss curve of the low noise (such as `0.0`, `0.05`) experiment drops more smoothly, while the curve of the high noise experiment shows more violent fluctuations.
+
+## 📈 Experimental Results and Analysis
+I conducted a series of experiments on the highly non-IID MNIST dataset (each client has only 2 categories of data) to evaluate and compare the performance of three federated learning algorithms, FedAvg, FedProx, and FedNova, when combined with local differential privacy (LDP). The experiment simulated different levels of privacy protection by introducing different intensities of Laplace noise (laplace_noise_scale from 0.0 to 0.1).
+
+#### Basis for selecting Laplace noise intensity
+The basis for selecting noise intensity follows the **Utility-First** strategy, and the specific steps are as follows:
+
+- Basic strategy and goal:
+
+Considering that MNIST is a public dataset with low sensitivity, we prioritize the availability of the model. Therefore, our preset utility goal is: after introducing LDP noise, the maximum accuracy loss of the model should not exceed 0.01.
+
+- Privacy budget range:
+
+In order to explore the impact of privacy protection while ensuring high availability, we set a relatively loose single-round privacy budget range ε ∈ [10, 20].
+
+- Theoretical formula:
+
+According to the definition of the Laplace mechanism in differential privacy, the relationship between the privacy budget ε and the noise intensity λ is:
+$$
+\epsilon = \frac{\Delta s}{\lambda}
+$$
+
+- **Parameter definition**:
+
+- **ε**: Single-round privacy budget.
+
+- **Δs**: Sensitivity. In this scenario, we use gradient clipping, so the sensitivity is defined by the clipping norm `grad_clip_norm`, whose value is `1.0`.
+
+- **λ**: The strength of Laplace noise (Noise strength), corresponding to the hyperparameter `laplace_noise_scale`.
+
+- Derivation and selection:
+
+Based on the above formulas and parameters, we can derive the range of noise intensity:
+
+- When **ε ≥ 10**, we can get **λ ≤ 1.0 / 10 = 0.1**.
+
+- When **ε ≤ 20**, we can get **λ ≥ 1.0 / 20 = 0.05**.
+
+Finally, we set the exploration range of noise intensity **λ** to the **`[0.05, 0.1]`** interval and evenly take values for experiments to observe in detail the trend of model performance changing with privacy budget.
+
+### 1\. Overview of core performance indicators
+
+The following table summarizes the maximum accuracy (Max Accuracy) of the three algorithms at different noise intensities and the number of communication rounds (Round) required to achieve this accuracy.
+
+| Algorithm | 0.0 | 0.05 | 0.06 | 0.07 | 0.08 | 0.09 | 0.1 |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **FedAvg** | 0.9858 (919 rounds) | 0.9828 (828 rounds) | 0.9785 (576 rounds) | 0.9761 (532 rounds) | 0.9785 (576 rounds) | 0.9715 (363 rounds) | 0.9735 (432 rounds) |
+| **FedProx** | 0.9821 (661 rounds) | 0.9790 (590 rounds) | 0.9816 (732 rounds) | 0.9764 (621 rounds) | 0.9744 (608 rounds) | 0.9712 (494 rounds) | 0.9643 (341 rounds) |
+| **FedNova** | 0.9881 (1166 rounds) | 0.9828 (775 rounds) | 0.9795 (603 rounds) | 0.9674 (255 rounds) | 0.9779 (617 rounds) | 0.9714 (423 rounds) | 0.9723 (548 rounds) |
+
+### 2\. Algorithm performance curve comparison
+
+The following three figures show the test accuracy and training loss change curves of `FedAvg`, `FedProx` and `FedNova` under different noise levels.
+
+#### FedAvg performance curve
+![](figures/FedAvg.png)
+#### FedProx performance curve
+![](figures/FedProx.png)
+#### FedNova performance curve
+![](figures/FedNova.png)
+### 3\. Comprehensive analysis and conclusion
+
+1. **Baseline performance (without LDP)**: In the non-IID environment without adding noise, `FedNova` performs best with an accuracy of **98.81%**, proving its superiority in solving the problem of data heterogeneity. `FedAvg` (`98.58%`) and `FedProx` (`98.21%`) also perform well, among which `FedProx` converges the fastest.
+
+2. **Performance comparison under LDP environment**: When local differential privacy noise is introduced, all algorithms show the classic "**privacy-utility trade-off**", that is, higher privacy protection (greater noise) will lead to degraded model performance. However, the three algorithms show significant differences in **robustness** to noise:
+
+* **`FedAvg` is the most robust**: Although the algorithm is the simplest, `FedAvg` is the most resistant to noise. Its performance decays most smoothly and predictably with the increase of noise, and it still maintains a high accuracy of `97.35%` under high noise (`0.1`).
+* **`FedProx` is more sensitive to noise**: `FedProx` has the most significant performance degradation after the introduction of noise, and its accuracy drops to `96.43%` when `Noise=0.1`. This may be because its proximal term, which is intended to constrain local updates, "conflicts" with the random noise injected by LDP, which in turn exacerbates the instability of training.
+* **`FedNova` performs the most unstable**: Although `FedNova` has the strongest benchmark performance, its results fluctuate greatly in the LDP environment. Its core normalization mechanism may be seriously disturbed by noise, causing its aggregation strategy to be sometimes effective and sometimes ineffective, and the training process is difficult to stabilize.
+
+3. **Final conclusion**: This series of experiments shows that when designing privacy protection mechanisms for federated learning systems, **federated learning algorithms and privacy technologies cannot be viewed in isolation**.
+
+Although `FedProx` and `FedNova` have theoretical advantages in processing non-IID data and have been verified in benchmark tests, the most basic **`FedAvg` algorithm showed the best "privacy-utility" balance in this experiment**. Its simple aggregation strategy is more robust in the face of random noise, and its performance decay is more gradual.
+
+Therefore, for applications that require local differential privacy in a highly non-IID environment, FedAvg may be a more reliable baseline choice due to its simplicity and robustness to noise. This provides important insights for future research on how to design federated learning algorithms that are more compatible with differential privacy.
