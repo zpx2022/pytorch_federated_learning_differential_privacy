@@ -108,29 +108,29 @@ The basis for selecting noise intensity follows the **Utility-First** strategy, 
 
 - Basic strategy and goal:
 
-Considering that MNIST is a public dataset with low sensitivity, we prioritize the availability of the model. Therefore, our preset utility goal is: after introducing LDP noise, the maximum accuracy loss of the model should not exceed 0.01.
+  Considering that MNIST is a public dataset with low sensitivity, we prioritize the availability of the model. Therefore, our preset utility goal is: after introducing LDP noise, the       maximum accuracy loss of the model should not exceed 0.01.
 
 - Privacy budget range:
 
-In order to explore the impact of privacy protection while ensuring high availability, we set a relatively loose single-round privacy budget range ε ∈ [10, 20].
+  In order to explore the impact of privacy protection while ensuring high availability, we set a relatively loose single-round privacy budget range ε ∈ [10, 20].
 
 - Theoretical formula:
 
-According to the definition of the Laplace mechanism in differential privacy, the relationship between the privacy budget ε and the noise intensity λ is:
+  According to the definition of the Laplace mechanism in differential privacy, the relationship between the privacy budget ε and the noise intensity λ is:
 
 $$
 \epsilon = \frac{\Delta s}{\lambda}
 $$
 
-- **Parameter definition**:
+- Parameter definition:
 
-  - **ε**: Single-round privacy budget.
+  - ε: Single-round privacy budget.
 
-  - **Δs**: Sensitivity. In this scenario, we use gradient clipping, so the sensitivity is defined by the clipping norm `grad_clip_norm`, whose value is `1.0`.
+  - Δs: Sensitivity. In this scenario, we use gradient clipping, so the sensitivity is defined by the clipping norm `grad_clip_norm`, whose value is `1.0`.
 
-  - **λ**: The strength of Laplace noise (Noise strength), corresponding to the hyperparameter `laplace_noise_scale`.
+  - λ: The strength of Laplace noise (Noise strength), corresponding to the hyperparameter `laplace_noise_scale`.
 
-- **Derivation and selection**:
+- Derivation and selection:
 
   Based on the above formulas and parameters, we can derive the range of noise intensity:
 
