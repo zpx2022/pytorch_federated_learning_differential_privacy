@@ -190,7 +190,7 @@ def fed_run():
 
         # Perform global aggregation on the server
         fed_server.select_clients()
-        global_state_dict, avg_loss, _ = fed_server.agg()
+        global_state_dict, avg_loss = fed_server.agg() 
         
         # Test the new global model
         accuracy = fed_server.test()
