@@ -138,7 +138,7 @@ $$
 
   - When **ε ≤ 20**, we can get **λ ≥ 1.0 / 20 = 0.05**.
 
-Finally, we set the exploration range of noise intensity **λ** to the **`[0.05, 0.1]`** interval and evenly take values for experiments to observe in detail the trend of model performance changing with privacy budget.
+  Finally, we set the exploration range of noise intensity **λ** to the **`[0.05, 0.1]`** interval and evenly take values for experiments to observe in detail the trend of model             performance changing with privacy budget.  
 
 ### 1\. Overview of core performance indicators
 
