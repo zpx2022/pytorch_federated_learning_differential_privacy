@@ -81,15 +81,15 @@ I conducted a series of experiments on the highly non-IID MNIST dataset (each cl
 #### Basis for selecting Laplace noise intensity
 The basis for selecting noise intensity follows the **Utility-First** strategy, and the specific steps are as follows:
 
-- Basic strategy and goal:
+- **Basic strategy and goal**:
 
   Considering that MNIST is a public dataset with low sensitivity, we prioritize the availability of the model. Therefore, our preset utility goal is: after introducing LDP noise, the       maximum accuracy loss of the model should not exceed 0.01.
 
-- Privacy budget range:
+- **Privacy budget range**:
 
   In order to explore the impact of privacy protection while ensuring high availability, we set a relatively loose single-round privacy budget range ε ∈ [10, 20].
 
-- Theoretical formula:
+- **Theoretical formula**:
 
   According to the definition of the Laplace mechanism in differential privacy, the relationship between the privacy budget ε and the noise intensity λ is:
 
@@ -97,7 +97,7 @@ $$
 \epsilon = \frac{\Delta s}{\lambda}
 $$
 
-- Parameter definition:
+- **Parameter definition**:
 
   - ε: Single-round privacy budget.
 
@@ -105,7 +105,7 @@ $$
 
   - λ: The strength of Laplace noise (Noise strength), corresponding to the hyperparameter `laplace_noise_scale`.
 
-- Derivation and selection:
+- **Derivation and selection**:
 
   Based on the above formulas and parameters, we can derive the range of noise intensity:
 
@@ -135,6 +135,7 @@ The following three figures show the test accuracy and training loss change curv
 ![](figures/FedProx.png)
 #### FedNova performance curve
 ![](figures/FedNova.png)
+
 ### 3\. Comprehensive analysis and conclusion
 
 1. **Baseline performance (without LDP)**: In the non-IID environment without adding noise, `FedNova` performs best with an accuracy of **98.81%**, proving its superiority in solving the problem of data heterogeneity. `FedAvg` (`98.58%`) and `FedProx` (`98.21%`) also perform well, with `FedProx` converging the fastest.
@@ -145,8 +146,24 @@ The following three figures show the test accuracy and training loss change curv
      * **`FedProx` is sensitive to noise**: `FedProx`'s performance degrades most significantly after the introduction of noise, and its accuracy drops to `96.43%` when `Noise=0.1`. This may be because its proximal terms designed to constrain local updates "clash" with the random noise injected by LDP, which in turn exacerbates the instability of training.
      * **`FedNova` is the most unstable**: Although `FedNova` has the strongest baseline performance, its results fluctuate greatly under the LDP environment. Its core normalization mechanism may be severely interfered by noise, causing its aggregation strategy to sometimes work and sometimes fail, and the training process is difficult to stabilize.
 
-3. **Final conclusion**: This series of experiments shows that when designing privacy protection mechanisms for federated learning systems, **federated learning algorithms and privacy technologies cannot be viewed in isolation**.
+3. **Appropriate noise intensity in LDP environment**: Based on the preset utility target, i.e., the maximum accuracy loss is less than 0.01, the FedAvg and FedProx algorithms use laplace_noise_scale of 0.05, 0.06, 0.07, 0.08, and the FedNova algorithm uses laplace_noise_scale of 0.05 and 0.06.
+
+4. **Final conclusion**: This series of experiments shows that when designing privacy protection mechanisms for federated learning systems, **federated learning algorithms and privacy technologies cannot be viewed in isolation**.
 
    Although `FedProx` and `FedNova` have theoretical advantages in processing non-IID data and have been verified in benchmarks, the most basic **`FedAvg` algorithm showed the best "privacy-utility" balance in this experiment**. Its simple aggregation strategy is more robust in the face of random noise, and its performance decay is more gradual.
 
    Therefore, for applications that need to deploy local differential privacy in a highly non-IID environment, `FedAvg` may be a more reliable baseline choice due to its simplicity and robustness to noise. This provides important inspiration for future research on how to design federated learning algorithms that are more compatible with differential privacy.
+   
+### 4\. In-depth case analysis: SCAFFOLD training instability and noise regularization effect
+
+In the preliminary experiment of the `SCAFFOLD` algorithm, we observed an abnormal phenomenon: when the learning rate was set to `0.01`, the noise-free benchmark experiment stopped early at the 123rd round due to the extremely unstable training process, and the highest accuracy was only **80.07%**. However, the control group with LDP noise (intensity 0.05) had a very stable training process and finally achieved a high accuracy of **97.74%**]. **This result of "adding noise is better" violates the conventional understanding of differential privacy. **
+
+Based on this, I hypothesized that **the `SCAFFOLD` algorithm is highly sensitive to learning rate in a highly non-IID environment, and LDP noise may have an unexpected regularization effect in unstable training. **
+
+To verify this hypothesis, I designed a supplementary experiment to reduce the learning rate to `0.005` and re-run it. The experimental results perfectly confirmed our conjecture:
+
+* **New stable baseline**: At `lr=0.005`, the noise-free baseline experiment became very stable and successfully converged to the highest accuracy of **96.96%**.
+
+* **Real trade-off**: On this stable baseline, the version with LDP noise (strength 0.05) achieved an accuracy of **96.12%**.
+
+**Final insight**: This case deeply reveals that differential privacy noise can play a role in stabilizing training in certain scenarios. At the same time, it also proves that when comparing algorithms, it is crucial to find the right hyperparameters for each algorithm to establish a "fair" baseline.
