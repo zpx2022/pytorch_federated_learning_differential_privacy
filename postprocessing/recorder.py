@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import json
 from json import JSONEncoder
 import pickle
+import re
 
 # --- Helper classes for JSON serialization with custom Python objects ---
 json_types = (list, dict, str, int, float, bool, type(None))
@@ -44,67 +45,85 @@ class Recorder(object):
         """
         fig, axes = plt.subplots(nrows=2, ncols=1, figsize=(12, 14))
         
-        # --- Step 1: Pre-process to get data for sorting ---
-        plot_data_with_key = []
+        # --- Step 1: Pre-process all data first ---
+        all_data = []
         for res, label in self.res_list:
             accuracy_curve = res['server']['iid_accuracy']
-            if accuracy_curve:
-                max_acc = max(accuracy_curve)
-                # Key for sorting: the round number where max_acc was achieved
-                sort_key = accuracy_curve.index(max_acc) 
-                plot_data_with_key.append({'sort_key': sort_key, 'res': res, 'label': label})
-        
-        # --- Step 2: Sort the data based on the key (max_acc_round) in descending order ---
-        # We sort by the round number (our 'sort_key'), from largest to smallest.
-        sorted_plot_data = sorted(plot_data_with_key, key=lambda x: x['sort_key'], reverse=True)
+            if not accuracy_curve:
+                continue
 
-        # --- Step 3: Plot based on the new sorted order ---
-        for i, data_item in enumerate(sorted_plot_data):
+            # Extract noise_scale for legend sorting
+            noise_scale = 999
+            try:
+                params_str = label.split('_results.json')[0]
+                params = eval(params_str)
+                noise_scale = float(params[5])
+            except Exception as e:
+                print(f"Could not parse noise scale from label '{label}'. Error: {e}")
+
+            # Extract max_acc_round for annotation staggering
+            max_acc = max(accuracy_curve)
+            max_acc_round = accuracy_curve.index(max_acc)
+
+            all_data.append({
+                'noise_scale': noise_scale,
+                'max_acc_round': max_acc_round,
+                'res': res,
+                'label': label
+            })
+
+        # --- Step 2: Create a staggering map based on max_acc_round ---
+        # Sort by round number (descending) to determine the up/down order
+        stagger_sorted_data = sorted(all_data, key=lambda x: x['max_acc_round'], reverse=True)
+        stagger_map = {}
+        for i, data_item in enumerate(stagger_sorted_data):
+            # The key is the label, the value is its staggering position (0 for down, 1 for up)
+            stagger_map[data_item['label']] = i % 2
+
+        # --- Step 3: Sort data by noise_scale for plotting and legend ---
+        plot_sorted_data = sorted(all_data, key=lambda x: x['noise_scale'], reverse=False)
+        
+        # --- Step 4: Plot based on the noise_scale sorted order ---
+        for data_item in plot_sorted_data:
             res = data_item['res']
             label = data_item['label']
             
             # Plot accuracy curve
             accuracy_curve = res['server']['iid_accuracy']
-            if accuracy_curve:
-                rounds = np.arange(1, len(accuracy_curve) + 1)
-                line, = axes[0].plot(rounds, np.array(accuracy_curve), label=label, alpha=1, linewidth=2)
+            rounds = np.arange(1, len(accuracy_curve) + 1)
+            line, = axes[0].plot(rounds, np.array(accuracy_curve), label=label, alpha=1, linewidth=2)
 
-                # --- Annotation logic for max accuracy ---
-                max_acc = max(accuracy_curve)
-                max_acc_index = accuracy_curve.index(max_acc)
-                max_acc_round = max_acc_index + 1
-                
-                line_color = line.get_color()
-                
-                # Draw a vertical dashed line at the round of max accuracy
-                axes[0].axvline(x=max_acc_round, color=line_color, linestyle='--', linewidth=1.5, alpha=0.7)
-                
-                # Apply the alternating logic based on the *new sorted order* `i`
-                if i % 2 == 0:
-                    y_position = max_acc - 0.015
-                    vertical_align = 'top'
-                else:
-                    y_position = max_acc + 0.005
-                    vertical_align = 'bottom'
+            # --- Annotation logic ---
+            max_acc = max(accuracy_curve)
+            max_acc_round = accuracy_curve.index(max_acc) + 1
+            line_color = line.get_color()
+            
+            axes[0].axvline(x=max_acc_round, color=line_color, linestyle='--', linewidth=1.5, alpha=0.7)
+            
+            # Use the stagger_map to decide the label's vertical position
+            if stagger_map.get(label) == 0: # Even in the round-sorted list
+                y_position = max_acc - 0.015
+                vertical_align = 'top'
+            else: # Odd in the round-sorted list
+                y_position = max_acc + 0.005
+                vertical_align = 'bottom'
 
-                # Add a text label showing the max accuracy value
-                axes[0].text(
-                    x=max_acc_round + 15,
-                    y=y_position,
-                    s=f'{max_acc:.4f}',
-                    color='white',
-                    backgroundcolor=line_color,
-                    ha='left',
-                    va=vertical_align,
-                    fontsize=9,
-                    fontweight='bold'
-                )
+            axes[0].text(
+                x=max_acc_round + 15,
+                y=y_position,
+                s=f'{max_acc:.4f}',
+                color='white',
+                backgroundcolor=line_color,
+                ha='left',
+                va=vertical_align,
+                fontsize=9,
+                fontweight='bold'
+            )
 
             # Plot loss curve
             loss_curve = res['server']['train_loss']
             if loss_curve:
                 rounds = np.arange(1, len(loss_curve) + 1)
-                # Note: The loss curves are also plotted in the new sorted order.
                 axes[1].plot(rounds, np.array(loss_curve), label=label, alpha=1, linewidth=2)
 
         # Configure plot aesthetics
