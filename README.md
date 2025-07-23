@@ -121,7 +121,7 @@ The following table summarizes the maximum accuracy (Max Accuracy) of the three 
 
 | Algorithm | 0.0 | 0.05 | 0.06 | 0.07 | 0.08 | 0.09 | 0.1 |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **FedAvg** | 0.9858 (919 rounds) | 0.9828 (828 rounds) | 0.9785 (576 rounds) | 0.9761 (532 rounds) | 0.9785 (576 rounds) | 0.9715 (363 rounds) | 0.9735 (432 rounds) |
+| **FedAvg** | 0.9858 (919 rounds) | 0.9828 (828 rounds) | 0.9785 (576 rounds) | 0.9761 (532 rounds) | 0.9769 (410轮) | 0.9715 (363 rounds) | 0.9735 (432 rounds) |
 | **FedProx** | 0.9821 (661 rounds) | 0.9790 (590 rounds) | 0.9816 (732 rounds) | 0.9764 (621 rounds) | 0.9744 (608 rounds) | 0.9712 (494 rounds) | 0.9643 (341 rounds) |
 | **FedNova** | 0.9881 (1166 rounds) | 0.9828 (775 rounds) | 0.9795 (603 rounds) | 0.9674 (255 rounds) | 0.9779 (617 rounds) | 0.9714 (423 rounds) | 0.9723 (548 rounds) |
 
