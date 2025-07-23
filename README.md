@@ -155,13 +155,13 @@ The following three figures show the test accuracy and training loss change curv
    Therefore, for applications that need to deploy local differential privacy in a highly non-IID environment, `FedAvg` may be a more reliable baseline choice due to its simplicity and robustness to noise. This provides important inspiration for future research on how to design federated learning algorithms that are more compatible with differential privacy.
    
 ### 4\. In-depth case analysis: SCAFFOLD training instability and noise regularization effect
-
+![](figures/SCAFFOLD_lr_0.01)
 In the preliminary experiment of the `SCAFFOLD` algorithm, we observed an abnormal phenomenon: when the learning rate was set to `0.01`, the noise-free benchmark experiment stopped early at the 123rd round due to the extremely unstable training process, and the highest accuracy was only **80.07%**. However, the control group with LDP noise (intensity 0.05) had a very stable training process and finally achieved a high accuracy of **97.74%**]. **This result of "adding noise is better" violates the conventional understanding of differential privacy. **
 
 Based on this, I hypothesized that **the `SCAFFOLD` algorithm is highly sensitive to learning rate in a highly non-IID environment, and LDP noise may have an unexpected regularization effect in unstable training. **
 
 To verify this hypothesis, I designed a supplementary experiment to reduce the learning rate to `0.005` and re-run it. The experimental results perfectly confirmed our conjecture:
-
+![](figures/SCAFFOLD_lr_0.005)
 * **New stable baseline**: At `lr=0.005`, the noise-free baseline experiment became very stable and successfully converged to the highest accuracy of **96.96%**.
 
 * **Real trade-off**: On this stable baseline, the version with LDP noise (strength 0.05) achieved an accuracy of **97.53%**.
