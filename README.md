@@ -164,6 +164,6 @@ To verify this hypothesis, I designed a supplementary experiment to reduce the l
 
 * **New stable baseline**: At `lr=0.005`, the noise-free baseline experiment became very stable and successfully converged to the highest accuracy of **96.96%**.
 
-* **Real trade-off**: On this stable baseline, the version with LDP noise (strength 0.05) achieved an accuracy of **96.12%**.
+* **Real trade-off**: On this stable baseline, the version with LDP noise (strength 0.05) achieved an accuracy of **97.53%**.
 
 **Final insight**: This case deeply reveals that differential privacy noise can play a role in stabilizing training in certain scenarios. At the same time, it also proves that when comparing algorithms, it is crucial to find the right hyperparameters for each algorithm to establish a "fair" baseline.
