@@ -45,10 +45,10 @@ class FedClient(object):
         """Client updates its model from the server's global model."""
         self.model.load_state_dict(model_state_dict)
 
-    def _apply_ldp(self):
+    def _apply_gradient_perturbation(self):
         """
-        Applies the Local Differential Privacy mechanism to the model's gradients.
-        This includes gradient clipping and adding Laplacian noise.
+        Applies gradient perturbation to the model's gradients. 
+        This includes gradient clipping and adding Laplacian noise to enhance robustness and provide a degree of privacy.
         """
         utils.clip_grad_norm_(self.model.parameters(), max_norm=self._grad_clip_norm)
         if self._use_ldp:      
@@ -58,7 +58,7 @@ class FedClient(object):
                     noise = laplace_dist.sample(param.grad.size()).to(self._device)
                     param.grad.data.add_(noise)
 
-    # --- Hook Methods for subclasses to override ---
+    # --- Hook Methods for subclasses to override ----
     def _before_train(self):
         """Hook for preparations before the training loop starts."""
         self.global_model_state_before_train = copy.deepcopy(self.model.state_dict())
@@ -123,7 +123,7 @@ class FedClient(object):
                     self._perform_gradient_correction()
 
                     # 4. Apply Local Differential Privacy
-                    self._apply_ldp()
+                    self._apply_gradient_perturbation()
                     
                     optimizer.step()
                     self.latest_loss = loss.item()
