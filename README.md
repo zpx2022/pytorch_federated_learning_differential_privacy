@@ -93,8 +93,8 @@ client:
   momentum: 0.9
   num_worker: 2
   # New parameters
-  use_gradient_perturbation: False                  # Control flag for Gradient Perturbation
   grad_clip_norm: 1.0      # Norm threshold for gradient clipping
+  add_noise: False                  # Control flag for noise addition
   laplace_noise_scale: 0.00    # Scale parameter for Laplace noise
   early_stopping_patience: 100 # Patience value for early stopping
 ```
