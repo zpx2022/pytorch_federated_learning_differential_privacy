@@ -76,17 +76,27 @@ pip install -r requirements.txt
 All experiments are driven by the configuration file `test_config.yaml`. You can modify this file to configure different algorithms, models, datasets, and hyperparameters.
 
 ```yaml
+system:
+  num_client: 100
+  num_local_class: 2
+  dataset: "MNIST"
+  model: "LeNet"
+  i_seed: 235235
+  num_round: 2000
+  res_root: "results"
 
 client:
-
-fed_algo: "SCAFFOLD" # Optional: FedAvg, FedProx, SCAFFOLD, FedNova
-
-lr: 0.005
-
-use_gradient_perturbation: True # Enable gradient perturbation
-
-laplace_noise_scale: 0.05 # Noise scale
-
+  fed_algo: "FedAvg"
+  lr: 0.01
+  batch_size: 64
+  num_local_epoch: 3
+  momentum: 0.9
+  num_worker: 2
+  # New parameters
+  use_gradient_perturbation: False                  # Control flag for Gradient Perturbation
+  grad_clip_norm: 1.0      # Norm threshold for gradient clipping
+  laplace_noise_scale: 0.00    # Scale parameter for Laplace noise
+  early_stopping_patience: 100 # Patience value for early stopping
 ```
 
 Start training with the following command:
