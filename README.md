@@ -1,3 +1,4 @@
+[English](README.md) | [简体中文](README.zh-CN.md)
 ## 1. Project Overview
 This project is a deeply optimized fork of [rruisong/pytorch_federated_learning](https://github.com/rruisong/pytorch_federated_learning).
 The original project provides a basic simulation platform for federated learning algorithms. Building upon this foundation, this project undergoes a comprehensive **architecture refactoring and functional enhancements**, aiming to address the core issues of the original code in **code redundancy, scalability, experimental efficiency, and robustness**.
