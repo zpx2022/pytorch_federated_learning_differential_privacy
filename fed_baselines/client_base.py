@@ -23,9 +23,9 @@ class FedClient(object):
         self._batch_size = config['batch_size']
         self._lr = config['lr']
         self._momentum = config['momentum']
-        self._use_gradient_perturbation = config['use_gradient_perturbation']
         self._grad_clip_norm = config['grad_clip_norm']
-        if self._use_gradient_perturbation:
+        self._add_noise = config['add_noise']
+        if self._add_noise:
             self._laplace_noise_scale = config['laplace_noise_scale']
         self.n_data = 0
         self.trainset = None
@@ -51,7 +51,7 @@ class FedClient(object):
         This includes gradient clipping and adding Laplacian noise to enhance robustness and provide a degree of privacy.
         """
         utils.clip_grad_norm_(self.model.parameters(), max_norm=self._grad_clip_norm)
-        if self._use_gradient_perturbation:      
+        if self._add_noise:      
             laplace_dist = torch.distributions.laplace.Laplace(0, self._laplace_noise_scale)       
             for param in self.model.parameters():
                 if param.grad is not None:
