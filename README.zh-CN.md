@@ -1,3 +1,4 @@
+[English](README.md) | [简体中文](README.zh-CN.md)
 ## 1. 项目概述
 本项目是 [rruisong/pytorch_federated_learning](https://github.com/rruisong/pytorch_federated_learning) 的一个深度优化分支。
 原始项目为联邦学习算法提供了一个基础的模拟平台。在此基础上，本项目进行了一次全面的**架构重构和功能增强**，旨在解决原始代码在**代码冗余、可扩展性、实验效率和健壮性**方面的核心问题。
